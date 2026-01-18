@@ -211,7 +211,7 @@ async fn get_video_info(app: AppHandle, url: String) -> Result<VideoInfoResponse
     Ok(VideoInfoResponse { info, formats })
 }
 
-fn build_format_string(quality: &str, format: &str) -> String {
+fn build_format_string(quality: &str, format: &str, video_codec: &str) -> String {
     // Audio-only formats
     if quality == "audio" || format == "mp3" || format == "m4a" || format == "opus" {
         return match format {
@@ -232,16 +232,51 @@ fn build_format_string(quality: &str, format: &str) -> String {
         _ => None,
     };
     
+    // Build codec filter
+    let _codec_filter = if video_codec == "h264" {
+        "[vcodec^=avc]"
+    } else {
+        "" // auto - no codec filter, let yt-dlp choose best
+    };
+    
     if format == "mp4" {
         if let Some(h) = height {
-            format!("bestvideo[height<={}][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height<={}]+bestaudio/best[height<={}]/best", h, h, h)
+            // With H264: prefer avc codec, fallback to any codec
+            if video_codec == "h264" {
+                format!(
+                    "bestvideo[height<={}][vcodec^=avc][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height<={}][vcodec^=avc]+bestaudio/bestvideo[height<={}][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height<={}]+bestaudio/best[height<={}]/best",
+                    h, h, h, h, h
+                )
+            } else {
+                format!(
+                    "bestvideo[height<={}][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height<={}]+bestaudio/best[height<={}]/best",
+                    h, h, h
+                )
+            }
         } else {
-            "bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo+bestaudio/best".to_string()
+            // Best quality
+            if video_codec == "h264" {
+                "bestvideo[vcodec^=avc][ext=mp4]+bestaudio[ext=m4a]/bestvideo[vcodec^=avc]+bestaudio/bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo+bestaudio/best".to_string()
+            } else {
+                "bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo+bestaudio/best".to_string()
+            }
         }
     } else if let Some(h) = height {
-        format!("bestvideo[height<={}]+bestaudio/best[height<={}]/best", h, h)
+        // Non-MP4 formats (MKV, WebM)
+        if video_codec == "h264" {
+            format!(
+                "bestvideo[height<={}][vcodec^=avc]+bestaudio/bestvideo[height<={}]+bestaudio/best[height<={}]/best",
+                h, h, h
+            )
+        } else {
+            format!("bestvideo[height<={}]+bestaudio/best[height<={}]/best", h, h)
+        }
     } else {
-        "bestvideo+bestaudio/best".to_string()
+        if video_codec == "h264" {
+            "bestvideo[vcodec^=avc]+bestaudio/bestvideo+bestaudio/best".to_string()
+        } else {
+            "bestvideo+bestaudio/best".to_string()
+        }
     }
 }
 
@@ -310,10 +345,12 @@ async fn download_video(
     quality: String,
     format: String,
     download_playlist: bool,
+    video_codec: String,
+    audio_bitrate: String,
 ) -> Result<(), String> {
     CANCEL_FLAG.store(false, Ordering::SeqCst);
     
-    let format_string = build_format_string(&quality, &format);
+    let format_string = build_format_string(&quality, &format, &video_codec);
     let output_template = format!("{}/%(title)s.%(ext)s", output_path);
     
     let mut args = vec![
@@ -342,11 +379,24 @@ async fn download_video(
             _ => args.push("mp3".to_string()), // Default to mp3 for audio
         }
         args.push("--audio-quality".to_string());
-        args.push("0".to_string()); // Best audio quality
+        // Set audio bitrate
+        match audio_bitrate.as_str() {
+            "320" => args.push("320K".to_string()),
+            "256" => args.push("256K".to_string()),
+            "192" => args.push("192K".to_string()),
+            "128" => args.push("128K".to_string()),
+            _ => args.push("0".to_string()), // "auto" = best quality
+        }
     } else {
         // Video formats - set merge output format
         args.push("--merge-output-format".to_string());
         args.push(format.clone());
+        
+        // For video, we can also set audio quality for the audio track
+        if audio_bitrate != "auto" {
+            args.push("--postprocessor-args".to_string());
+            args.push(format!("ffmpeg:-b:a {}k", audio_bitrate));
+        }
     }
     
     args.push(url);

@@ -4,7 +4,15 @@ import { listen } from '@tauri-apps/api/event';
 import { open } from '@tauri-apps/plugin-dialog';
 import { downloadDir } from '@tauri-apps/api/path';
 import { readTextFile } from '@tauri-apps/plugin-fs';
-import type { DownloadItem, DownloadSettings, DownloadProgress, Quality, Format } from '@/lib/types';
+import type { 
+  DownloadItem, 
+  DownloadSettings, 
+  DownloadProgress, 
+  Quality, 
+  Format,
+  VideoCodec,
+  AudioBitrate,
+} from '@/lib/types';
 
 const STORAGE_KEY = 'youwee-settings';
 
@@ -29,6 +37,8 @@ function saveSettings(settings: DownloadSettings) {
       quality: settings.quality,
       format: settings.format,
       downloadPlaylist: settings.downloadPlaylist,
+      videoCodec: settings.videoCodec,
+      audioBitrate: settings.audioBitrate,
     }));
   } catch (e) {
     console.error('Failed to save settings:', e);
@@ -47,6 +57,8 @@ export function useDownload() {
       format: saved.format || 'mp4',
       outputPath: saved.outputPath || '',
       downloadPlaylist: saved.downloadPlaylist || false,
+      videoCodec: saved.videoCodec || 'h264',
+      audioBitrate: saved.audioBitrate || 'auto',
     };
   });
   const [currentPlaylistInfo, setCurrentPlaylistInfo] = useState<{
@@ -249,6 +261,8 @@ export function useDownload() {
             quality: settings.quality,
             format: settings.format,
             downloadPlaylist: settings.downloadPlaylist,
+            videoCodec: settings.videoCodec,
+            audioBitrate: settings.audioBitrate,
           });
           
           setItems(items => items.map(i => 
@@ -302,6 +316,22 @@ export function useDownload() {
     });
   }, []);
 
+  const updateVideoCodec = useCallback((videoCodec: VideoCodec) => {
+    setSettings(s => {
+      const newSettings = { ...s, videoCodec };
+      saveSettings(newSettings);
+      return newSettings;
+    });
+  }, []);
+
+  const updateAudioBitrate = useCallback((audioBitrate: AudioBitrate) => {
+    setSettings(s => {
+      const newSettings = { ...s, audioBitrate };
+      saveSettings(newSettings);
+      return newSettings;
+    });
+  }, []);
+
   const togglePlaylist = useCallback(() => {
     setSettings(s => {
       const newSettings = { ...s, downloadPlaylist: !s.downloadPlaylist };
@@ -327,6 +357,8 @@ export function useDownload() {
     updateSettings,
     updateQuality,
     updateFormat,
+    updateVideoCodec,
+    updateAudioBitrate,
     togglePlaylist,
   };
 }

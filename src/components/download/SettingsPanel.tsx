@@ -4,6 +4,9 @@ import {
   FileVideo,
   Music,
   ChevronDown,
+  HardDrive,
+  Film,
+  Volume2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -22,7 +25,8 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
-import type { Quality, Format, DownloadSettings } from '@/lib/types';
+import type { Quality, Format, DownloadSettings, VideoCodec, AudioBitrate } from '@/lib/types';
+import { estimateFileSize } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
 
@@ -49,11 +53,27 @@ const audioFormatOptions: { value: Format; label: string; icon: React.ReactNode 
   { value: 'opus', label: 'Opus', icon: <Music className="w-4 h-4" /> },
 ];
 
+const videoCodecOptions: { value: VideoCodec; label: string; description?: string }[] = [
+  { value: 'h264', label: 'H.264', description: 'Tương thích tốt với mọi player' },
+  { value: 'auto', label: 'Auto', description: 'Chất lượng tốt nhất (VP9/AV1)' },
+];
+
+const audioBitrateOptions: { value: AudioBitrate; label: string }[] = [
+  { value: 'auto', label: 'Auto (Best)' },
+  { value: '320', label: '320 kbps' },
+  { value: '256', label: '256 kbps' },
+  { value: '192', label: '192 kbps' },
+  { value: '128', label: '128 kbps' },
+];
+
 interface SettingsPanelProps {
   settings: DownloadSettings;
   disabled?: boolean;
+  estimatedDuration?: number; // Duration in seconds for file size estimation
   onQualityChange: (quality: Quality) => void;
   onFormatChange: (format: Format) => void;
+  onVideoCodecChange: (codec: VideoCodec) => void;
+  onAudioBitrateChange: (bitrate: AudioBitrate) => void;
   onPlaylistToggle: () => void;
   onSelectFolder: () => void;
 }
@@ -61,16 +81,24 @@ interface SettingsPanelProps {
 export function SettingsPanel({
   settings,
   disabled,
+  estimatedDuration,
   onQualityChange,
   onFormatChange,
+  onVideoCodecChange,
+  onAudioBitrateChange,
   onPlaylistToggle,
   onSelectFolder,
 }: SettingsPanelProps) {
   const [isOpen, setIsOpen] = useState(false);
 
   // Determine if audio-only mode
-  const isAudioOnly = settings.quality === 'audio';
+  const isAudioOnly = settings.quality === 'audio' || ['mp3', 'm4a', 'opus'].includes(settings.format);
   const formatOptions = isAudioOnly ? audioFormatOptions : videoFormatOptions;
+
+  // Calculate estimated file size
+  const fileSizeEstimate = estimatedDuration 
+    ? estimateFileSize(estimatedDuration, settings.quality, settings.format, settings.audioBitrate)
+    : '';
 
   // Handle quality change - auto-switch format if needed
   const handleQualityChange = (quality: Quality) => {
@@ -91,6 +119,10 @@ export function SettingsPanel({
     return opt?.shortLabel || settings.quality;
   };
 
+  const getCodecLabel = () => {
+    return settings.videoCodec === 'h264' ? 'H.264' : 'Auto';
+  };
+
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
       <div className="rounded-lg sm:rounded-xl border bg-card/50 backdrop-blur-sm overflow-hidden">
@@ -108,7 +140,14 @@ export function SettingsPanel({
             <div className="flex items-center gap-1.5 sm:gap-2">
               <Badge variant="secondary" className="font-normal text-[10px] sm:text-xs px-1.5 sm:px-2">
                 {getQualityLabel()} • {settings.format.toUpperCase()}
+                {!isAudioOnly && <span className="hidden sm:inline"> • {getCodecLabel()}</span>}
               </Badge>
+              {fileSizeEstimate && (
+                <Badge variant="outline" className="font-normal text-[10px] sm:text-xs px-1.5 sm:px-2 hidden xs:flex items-center gap-1">
+                  <HardDrive className="w-3 h-3" />
+                  {fileSizeEstimate}
+                </Badge>
+              )}
               <ChevronDown className={cn(
                 "w-4 h-4 text-muted-foreground transition-transform",
                 isOpen && "rotate-180"
@@ -168,6 +207,99 @@ export function SettingsPanel({
                 </Select>
               </div>
             </div>
+
+            {/* Video Codec & Audio Bitrate */}
+            <div className="grid grid-cols-2 gap-2 sm:gap-4">
+              {/* Video Codec - only show for video formats */}
+              {!isAudioOnly ? (
+                <div className="space-y-1.5 sm:space-y-2">
+                  <Label className="text-[10px] sm:text-xs text-muted-foreground flex items-center gap-1">
+                    <Film className="w-3 h-3" />
+                    Video Codec
+                  </Label>
+                  <Select
+                    value={settings.videoCodec}
+                    onValueChange={onVideoCodecChange}
+                    disabled={disabled}
+                  >
+                    <SelectTrigger className="bg-background/50 h-8 sm:h-10 text-xs sm:text-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {videoCodecOptions.map((opt) => (
+                        <SelectItem key={opt.value} value={opt.value}>
+                          <div className="flex flex-col">
+                            <span className="text-xs sm:text-sm">{opt.label}</span>
+                            {opt.description && (
+                              <span className="text-[10px] text-muted-foreground hidden sm:block">{opt.description}</span>
+                            )}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              ) : (
+                <div className="space-y-1.5 sm:space-y-2">
+                  <Label className="text-[10px] sm:text-xs text-muted-foreground flex items-center gap-1">
+                    <Volume2 className="w-3 h-3" />
+                    Audio Bitrate
+                  </Label>
+                  <Select
+                    value={settings.audioBitrate}
+                    onValueChange={onAudioBitrateChange}
+                    disabled={disabled}
+                  >
+                    <SelectTrigger className="bg-background/50 h-8 sm:h-10 text-xs sm:text-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {audioBitrateOptions.map((opt) => (
+                        <SelectItem key={opt.value} value={opt.value}>
+                          <span className="text-xs sm:text-sm">{opt.label}</span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              {/* Audio Bitrate - show for video too (audio track bitrate) */}
+              {!isAudioOnly && (
+                <div className="space-y-1.5 sm:space-y-2">
+                  <Label className="text-[10px] sm:text-xs text-muted-foreground flex items-center gap-1">
+                    <Volume2 className="w-3 h-3" />
+                    Audio Bitrate
+                  </Label>
+                  <Select
+                    value={settings.audioBitrate}
+                    onValueChange={onAudioBitrateChange}
+                    disabled={disabled}
+                  >
+                    <SelectTrigger className="bg-background/50 h-8 sm:h-10 text-xs sm:text-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {audioBitrateOptions.map((opt) => (
+                        <SelectItem key={opt.value} value={opt.value}>
+                          <span className="text-xs sm:text-sm">{opt.label}</span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </div>
+
+            {/* File Size Estimate */}
+            {fileSizeEstimate && (
+              <div className="flex items-center gap-2 p-2 sm:p-3 rounded-lg bg-accent/30">
+                <HardDrive className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                <span className="text-xs sm:text-sm text-muted-foreground">
+                  Estimated file size: <span className="font-medium text-foreground">{fileSizeEstimate}</span>
+                </span>
+              </div>
+            )}
 
             {/* Playlist Toggle */}
             <div className="flex items-center justify-between p-2 sm:p-3 rounded-lg bg-accent/30">

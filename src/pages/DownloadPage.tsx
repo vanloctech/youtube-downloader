@@ -21,10 +21,16 @@ export function DownloadPage() {
     stopDownload,
     updateQuality,
     updateFormat,
+    updateVideoCodec,
+    updateAudioBitrate,
     togglePlaylist,
   } = useDownload();
 
   const pendingCount = items.filter(i => i.status !== 'completed').length;
+
+  // Calculate total duration for file size estimate (sum of all pending items)
+  // For now we'll use a sample duration - in real app this would come from video info
+  const estimatedDuration = items.length > 0 ? 300 : undefined; // 5 min average
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
@@ -50,8 +56,11 @@ export function DownloadPage() {
         <SettingsPanel
           settings={settings}
           disabled={isDownloading}
+          estimatedDuration={estimatedDuration}
           onQualityChange={updateQuality}
           onFormatChange={updateFormat}
+          onVideoCodecChange={updateVideoCodec}
+          onAudioBitrateChange={updateAudioBitrate}
           onPlaylistToggle={togglePlaylist}
           onSelectFolder={selectOutputFolder}
         />
