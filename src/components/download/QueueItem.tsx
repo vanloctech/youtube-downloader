@@ -114,8 +114,8 @@ export function QueueItem({
       <div className="flex-1 min-w-0 space-y-1 sm:space-y-1.5">
         <div className="flex items-center gap-1.5 sm:gap-2">
           {getStatusIcon()}
-          <div className="flex-1 min-w-0">
-            <p className="text-xs sm:text-sm font-medium truncate leading-tight">
+          <div className="flex-1 min-w-0 max-w-[120px] xs:max-w-[180px] sm:max-w-none">
+            <p className="text-xs sm:text-sm font-medium truncate leading-tight" title={item.title}>
               {item.title}
             </p>
           </div>
