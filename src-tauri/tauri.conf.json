@@ -1,8 +1,8 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "YouTube Downloader",
+  "productName": "Youwee",
   "version": "0.1.0",
-  "identifier": "com.ytdownloader.app",
+  "identifier": "com.youwee.app",
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:5173",
@@ -12,10 +12,10 @@
   "app": {
     "windows": [
       {
-        "title": "YouTube Batch Downloader",
-        "width": 900,
+        "title": "Youwee",
+        "width": 1000,
         "height": 700,
-        "minWidth": 700,
+        "minWidth": 800,
         "minHeight": 500,
         "resizable": true,
         "fullscreen": false,

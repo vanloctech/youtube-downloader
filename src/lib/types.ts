@@ -1,11 +1,11 @@
-export type Quality = 'best' | '1080' | '720' | '480' | '360' | 'audio';
-export type Format = 'mp4' | 'mkv' | 'webm' | 'mp3';
+export type Quality = 'best' | '4k' | '2k' | '1080' | '720' | '480' | '360' | 'audio';
+export type Format = 'mp4' | 'mkv' | 'webm' | 'mp3' | 'm4a' | 'opus';
 
 export interface DownloadItem {
   id: string;
   url: string;
   title: string;
-  status: 'pending' | 'downloading' | 'completed' | 'error';
+  status: 'pending' | 'fetching' | 'downloading' | 'completed' | 'error';
   progress: number;
   speed: string;
   eta: string;
@@ -13,6 +13,9 @@ export interface DownloadItem {
   isPlaylist?: boolean;
   playlistIndex?: number;
   playlistTotal?: number;
+  thumbnail?: string;
+  duration?: string;
+  channel?: string;
 }
 
 export interface DownloadSettings {
@@ -31,6 +34,29 @@ export interface DownloadProgress {
   title?: string;
   playlist_index?: number;
   playlist_count?: number;
+}
+
+export interface VideoInfo {
+  id: string;
+  title: string;
+  thumbnail: string;
+  duration: number;
+  channel: string;
+  upload_date: string;
+  view_count: number;
+  is_playlist: boolean;
+  playlist_count?: number;
+}
+
+export interface FormatOption {
+  format_id: string;
+  ext: string;
+  resolution: string;
+  vcodec: string;
+  acodec: string;
+  filesize?: number;
+  tbr?: number;
+  format_note?: string;
 }
 
 export interface PlaylistInfo {

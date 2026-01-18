@@ -5069,7 +5069,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "youtube-downloader"
+name = "youwee"
 version = "0.1.0"
 dependencies = [
  "log",
