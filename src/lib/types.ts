@@ -30,6 +30,7 @@ export interface DownloadSettings {
   audioBitrate: AudioBitrate;
   concurrentDownloads: number; // 1-5
   playlistLimit: number; // 0 = unlimited, 1-100
+  autoCheckUpdate: boolean; // Auto check for app updates on startup
 }
 
 export interface DownloadProgress {

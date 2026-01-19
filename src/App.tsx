@@ -1,16 +1,16 @@
 import { useState } from 'react';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import { DependenciesProvider } from '@/contexts/DependenciesContext';
-import { DownloadProvider } from '@/contexts/DownloadContext';
+import { DownloadProvider, useDownload } from '@/contexts/DownloadContext';
+import { UpdaterProvider, useUpdater } from '@/contexts/UpdaterContext';
 import { MainLayout } from '@/components/layout';
 import type { Page } from '@/components/layout';
 import { DownloadPage, SettingsPage } from '@/pages';
 import { UpdateDialog } from '@/components/UpdateDialog';
-import { useAppUpdater } from '@/hooks';
 
 function AppContent() {
   const [currentPage, setCurrentPage] = useState<Page>('download');
-  const updater = useAppUpdater();
+  const updater = useUpdater();
 
   return (
     <>
@@ -33,12 +33,25 @@ function AppContent() {
   );
 }
 
+// Wrapper to get settings and pass to UpdaterProvider
+function UpdaterWrapper({ children }: { children: React.ReactNode }) {
+  const { settings } = useDownload();
+  
+  return (
+    <UpdaterProvider autoCheck={settings.autoCheckUpdate}>
+      {children}
+    </UpdaterProvider>
+  );
+}
+
 function App() {
   return (
     <ThemeProvider>
       <DependenciesProvider>
         <DownloadProvider>
-          <AppContent />
+          <UpdaterWrapper>
+            <AppContent />
+          </UpdaterWrapper>
         </DownloadProvider>
       </DependenciesProvider>
     </ThemeProvider>

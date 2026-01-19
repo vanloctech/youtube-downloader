@@ -1,5 +1,7 @@
 import { useTheme } from '@/contexts/ThemeContext';
 import { useDependencies } from '@/contexts/DependenciesContext';
+import { useDownload } from '@/contexts/DownloadContext';
+import { useUpdater } from '@/contexts/UpdaterContext';
 import { themes } from '@/lib/themes';
 import type { ThemeName } from '@/lib/themes';
 import { cn } from '@/lib/utils';
@@ -15,9 +17,12 @@ import {
   CheckCircle2,
   AlertCircle,
   Loader2,
+  Sparkles,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 
 // Gradient backgrounds for theme preview
 const themeGradients: Record<ThemeName, string> = {
@@ -31,6 +36,8 @@ const themeGradients: Record<ThemeName, string> = {
 
 export function SettingsPage() {
   const { theme, setTheme, mode, setMode } = useTheme();
+  const { settings, updateAutoCheckUpdate } = useDownload();
+  const updater = useUpdater();
   
   // Use global dependencies context (cached)
   const {
@@ -47,6 +54,12 @@ export function SettingsPage() {
 
   // Compare versions to check if update is available
   const isUpdateAvailable = latestVersion && ytdlpInfo && latestVersion !== ytdlpInfo.version;
+  
+  // App update status helpers
+  const isAppUpdateAvailable = updater.status === 'available';
+  const isAppChecking = updater.status === 'checking';
+  const isAppUpToDate = updater.status === 'up-to-date';
+  const isAppError = updater.status === 'error';
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
@@ -57,6 +70,101 @@ export function SettingsPage() {
 
       {/* Content */}
       <div className="flex-1 overflow-auto p-4 sm:p-6 space-y-6">
+        {/* App Updates Section */}
+        <div className="space-y-4">
+          <div>
+            <h2 className="text-sm font-semibold">App Updates</h2>
+            <p className="text-xs text-muted-foreground">
+              Keep Youwee up to date
+            </p>
+          </div>
+
+          <div className="rounded-xl border bg-card/50 backdrop-blur-sm overflow-hidden">
+            {/* App update row */}
+            <div className="p-4">
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex items-start gap-3 min-w-0">
+                  <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center flex-shrink-0">
+                    <Sparkles className="w-5 h-5 text-white" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-medium">Youwee</span>
+                      <Badge variant="secondary" className="text-xs font-mono">
+                        v0.2.0
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {isAppChecking ? (
+                        <span className="flex items-center gap-1 text-muted-foreground">
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                          Checking for updates...
+                        </span>
+                      ) : isAppUpdateAvailable && updater.updateInfo ? (
+                        <span className="text-primary">
+                          Update available: v{updater.updateInfo.version}
+                        </span>
+                      ) : isAppUpToDate ? (
+                        <span className="flex items-center gap-1 text-emerald-500">
+                          <CheckCircle2 className="w-3 h-3" />
+                          Up to date
+                        </span>
+                      ) : isAppError ? (
+                        <span className="flex items-center gap-1 text-destructive">
+                          <AlertCircle className="w-3 h-3" />
+                          {updater.error || 'Failed to check'}
+                        </span>
+                      ) : (
+                        'Modern YouTube downloader'
+                      )}
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  {isAppUpdateAvailable && (
+                    <Button
+                      size="sm"
+                      onClick={updater.downloadAndInstall}
+                      className="h-8"
+                    >
+                      <Download className="w-4 h-4 mr-1.5" />
+                      Update
+                    </Button>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={updater.checkForUpdate}
+                    disabled={isAppChecking}
+                    className="h-8 w-8"
+                    title="Check for updates"
+                  >
+                    <RefreshCw className={cn(
+                      "w-4 h-4",
+                      isAppChecking && "animate-spin"
+                    )} />
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            {/* Auto update toggle */}
+            <div className="px-4 py-3 bg-muted/30 border-t flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Label htmlFor="auto-update" className="text-xs font-medium cursor-pointer">
+                  Auto-check for updates on startup
+                </Label>
+              </div>
+              <Switch
+                id="auto-update"
+                checked={settings.autoCheckUpdate}
+                onCheckedChange={updateAutoCheckUpdate}
+              />
+            </div>
+          </div>
+        </div>
+
         {/* Dependencies Section */}
         <div className="space-y-4">
           <div>
@@ -281,7 +389,7 @@ export function SettingsPage() {
               </div>
               <div className="flex-1">
                 <h3 className="text-xl font-bold gradient-text">Youwee</h3>
-                <p className="text-sm text-muted-foreground">Version 0.1.0</p>
+                <p className="text-sm text-muted-foreground">Version 0.2.0</p>
                 <p className="text-xs text-muted-foreground mt-1">
                   Modern YouTube Video Downloader
                 </p>
@@ -323,6 +431,14 @@ export function SettingsPage() {
                 <div className="flex items-center gap-2">
                   <span className="w-1.5 h-1.5 rounded-full bg-primary" />
                   <span>6 color themes</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-primary" />
+                  <span>Auto updates</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-primary" />
+                  <span>Concurrent downloads</span>
                 </div>
               </div>
             </div>

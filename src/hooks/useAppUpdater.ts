@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { check } from '@tauri-apps/plugin-updater';
 import { relaunch } from '@tauri-apps/plugin-process';
 
@@ -104,15 +104,6 @@ export function useAppUpdater() {
     setStatus('idle');
     setUpdateInfo(null);
   }, []);
-
-  // Check for updates on mount (once)
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      checkForUpdate();
-    }, 2000); // Wait 2s after app start
-
-    return () => clearTimeout(timer);
-  }, [checkForUpdate]);
 
   return {
     status,

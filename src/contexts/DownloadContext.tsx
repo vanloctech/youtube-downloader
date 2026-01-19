@@ -41,6 +41,7 @@ function saveSettings(settings: DownloadSettings) {
       audioBitrate: settings.audioBitrate,
       concurrentDownloads: settings.concurrentDownloads,
       playlistLimit: settings.playlistLimit,
+      autoCheckUpdate: settings.autoCheckUpdate,
     }));
   } catch (e) {
     console.error('Failed to save settings:', e);
@@ -74,6 +75,7 @@ interface DownloadContextType {
   updateAudioBitrate: (bitrate: AudioBitrate) => void;
   updateConcurrentDownloads: (concurrent: number) => void;
   updatePlaylistLimit: (limit: number) => void;
+  updateAutoCheckUpdate: (enabled: boolean) => void;
   togglePlaylist: () => void;
 }
 
@@ -95,6 +97,7 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
       audioBitrate: saved.audioBitrate || 'auto',
       concurrentDownloads: saved.concurrentDownloads || 1,
       playlistLimit: saved.playlistLimit || 0, // 0 = unlimited
+      autoCheckUpdate: saved.autoCheckUpdate !== false, // Default to true
     };
   });
   
@@ -427,6 +430,14 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const updateAutoCheckUpdate = useCallback((enabled: boolean) => {
+    setSettings(s => {
+      const newSettings = { ...s, autoCheckUpdate: enabled };
+      saveSettings(newSettings);
+      return newSettings;
+    });
+  }, []);
+
   const togglePlaylist = useCallback(() => {
     setSettings(s => {
       const newSettings = { ...s, downloadPlaylist: !s.downloadPlaylist };
@@ -456,6 +467,7 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
     updateAudioBitrate,
     updateConcurrentDownloads,
     updatePlaylistLimit,
+    updateAutoCheckUpdate,
     togglePlaylist,
   };
 
