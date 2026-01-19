@@ -30,8 +30,11 @@ export function DownloadPage() {
   const pendingCount = items.filter(i => i.status !== 'completed').length;
   const hasItems = items.length > 0;
 
-  // Calculate total duration for file size estimate
-  const estimatedDuration = items.length > 0 ? 300 : undefined;
+  // Calculate total file size from fetched video info (in bytes)
+  // Only show if we have actual filesize data from videos
+  const totalFileSize = items.reduce((sum, item) => {
+    return sum + (item.filesize || 0);
+  }, 0);
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
@@ -57,7 +60,7 @@ export function DownloadPage() {
           <SettingsPanel
             settings={settings}
             disabled={isDownloading}
-            estimatedDuration={estimatedDuration}
+            totalFileSize={totalFileSize > 0 ? totalFileSize : undefined}
             onQualityChange={updateQuality}
             onFormatChange={updateFormat}
             onVideoCodecChange={updateVideoCodec}

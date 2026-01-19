@@ -18,6 +18,7 @@ export interface DownloadItem {
   thumbnail?: string;
   duration?: string;
   channel?: string;
+  filesize?: number; // File size in bytes from video info
 }
 
 export interface DownloadSettings {
@@ -83,55 +84,4 @@ export interface PlaylistEntry {
   title: string;
   url: string;
   duration?: number;
-}
-
-// Helper to estimate file size based on quality and duration
-export function estimateFileSize(
-  durationSeconds: number,
-  quality: Quality,
-  format: Format,
-  audioBitrate: AudioBitrate
-): string {
-  if (!durationSeconds || durationSeconds <= 0) return '';
-
-  // Bitrates in kbps (approximate for different qualities)
-  const videoBitrates: Record<Quality, number> = {
-    'best': 8000,
-    '4k': 20000,
-    '2k': 12000,
-    '1080': 5000,
-    '720': 2500,
-    '480': 1000,
-    '360': 500,
-    'audio': 0,
-  };
-
-  const audioBitrates: Record<AudioBitrate, number> = {
-    'auto': 192,
-    '128': 128,
-    '192': 192,
-    '256': 256,
-    '320': 320,
-  };
-
-  const isAudioOnly = quality === 'audio' || format === 'mp3' || format === 'm4a' || format === 'opus';
-  
-  let totalBitrate: number;
-  if (isAudioOnly) {
-    totalBitrate = audioBitrates[audioBitrate];
-  } else {
-    totalBitrate = videoBitrates[quality] + audioBitrates[audioBitrate];
-  }
-
-  // Calculate size in bytes: (bitrate * duration) / 8
-  const sizeBytes = (totalBitrate * 1000 * durationSeconds) / 8;
-
-  // Format size
-  if (sizeBytes >= 1024 * 1024 * 1024) {
-    return `~${(sizeBytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
-  } else if (sizeBytes >= 1024 * 1024) {
-    return `~${(sizeBytes / (1024 * 1024)).toFixed(0)} MB`;
-  } else {
-    return `~${(sizeBytes / 1024).toFixed(0)} KB`;
-  }
 }

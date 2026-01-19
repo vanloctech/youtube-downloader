@@ -26,8 +26,18 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import type { Quality, Format, DownloadSettings, VideoCodec, AudioBitrate } from '@/lib/types';
-import { estimateFileSize } from '@/lib/types';
 import { cn } from '@/lib/utils';
+
+function formatFileSize(bytes: number): string {
+  if (bytes >= 1024 * 1024 * 1024) {
+    return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
+  } else if (bytes >= 1024 * 1024) {
+    return `${(bytes / (1024 * 1024)).toFixed(0)} MB`;
+  } else if (bytes >= 1024) {
+    return `${(bytes / 1024).toFixed(0)} KB`;
+  }
+  return `${bytes} B`;
+}
 
 const qualityOptions: { value: Quality; label: string; shortLabel: string }[] = [
   { value: 'best', label: 'Best Available', shortLabel: 'Best' },
@@ -68,7 +78,7 @@ const audioBitrateOptions: { value: AudioBitrate; label: string }[] = [
 interface SettingsPanelProps {
   settings: DownloadSettings;
   disabled?: boolean;
-  estimatedDuration?: number;
+  totalFileSize?: number; // Total file size in bytes from fetched video info
   onQualityChange: (quality: Quality) => void;
   onFormatChange: (format: Format) => void;
   onVideoCodecChange: (codec: VideoCodec) => void;
@@ -80,7 +90,7 @@ interface SettingsPanelProps {
 export function SettingsPanel({
   settings,
   disabled,
-  estimatedDuration,
+  totalFileSize,
   onQualityChange,
   onFormatChange,
   onVideoCodecChange,
@@ -91,8 +101,9 @@ export function SettingsPanel({
   const isAudioOnly = settings.quality === 'audio' || ['mp3', 'm4a', 'opus'].includes(settings.format);
   const formatOptions = isAudioOnly ? audioFormatOptions : videoFormatOptions;
 
-  const fileSizeEstimate = estimatedDuration 
-    ? estimateFileSize(estimatedDuration, settings.quality, settings.format, settings.audioBitrate)
+  // Only show file size if we have actual data from video info
+  const fileSizeDisplay = totalFileSize && totalFileSize > 0 
+    ? formatFileSize(totalFileSize) 
     : '';
 
   const handleQualityChange = (quality: Quality) => {
@@ -190,10 +201,10 @@ export function SettingsPanel({
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h4 className="text-sm font-medium">Advanced Settings</h4>
-              {fileSizeEstimate && (
+              {fileSizeDisplay && (
                 <Badge variant="outline" className="text-[10px] gap-1">
                   <HardDrive className="w-3 h-3" />
-                  ~{fileSizeEstimate}
+                  {fileSizeDisplay}
                 </Badge>
               )}
             </div>
@@ -306,14 +317,14 @@ export function SettingsPanel({
       </button>
 
       {/* File Size Estimate Badge */}
-      {fileSizeEstimate && (
+      {fileSizeDisplay && (
         <Badge 
           variant="outline" 
           className="h-9 px-2.5 text-xs gap-1.5 hidden sm:flex"
           title="Estimated file size"
         >
           <HardDrive className="w-3.5 h-3.5" />
-          ~{fileSizeEstimate}
+          {fileSizeDisplay}
         </Badge>
       )}
     </div>

@@ -101,17 +101,17 @@ export function QueueItem({
         
         {/* Progress Overlay */}
         {isActive && (
-          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex flex-col justify-end p-2">
+          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent flex flex-col justify-end p-2 transition-all duration-300">
             {/* Progress Bar */}
-            <div className="h-1 rounded-full overflow-hidden bg-white/30 mb-1">
+            <div className="h-1.5 rounded-full overflow-hidden bg-black/40 backdrop-blur-sm border border-white/10 mb-1.5 shadow-sm">
               <div 
-                className="h-full progress-animated rounded-full transition-all duration-300"
+                className="h-full progress-animated rounded-full transition-all duration-300 shadow-[0_0_8px_rgba(255,255,255,0.3)]"
                 style={{ width: `${item.progress}%` }}
               />
             </div>
-            <div className="flex items-center justify-between text-[10px] text-white/90 font-medium">
-              <span>{item.progress.toFixed(0)}%</span>
-              {item.speed && <span>{item.speed}</span>}
+            <div className="flex items-center justify-between text-[10px] text-white font-medium drop-shadow-md">
+              <span className="tabular-nums">{item.progress.toFixed(0)}%</span>
+              {item.speed && <span className="tabular-nums opacity-90">{item.speed}</span>}
             </div>
           </div>
         )}
