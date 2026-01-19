@@ -39,6 +39,8 @@ function saveSettings(settings: DownloadSettings) {
       downloadPlaylist: settings.downloadPlaylist,
       videoCodec: settings.videoCodec,
       audioBitrate: settings.audioBitrate,
+      concurrentDownloads: settings.concurrentDownloads,
+      playlistLimit: settings.playlistLimit,
     }));
   } catch (e) {
     console.error('Failed to save settings:', e);
@@ -70,6 +72,8 @@ interface DownloadContextType {
   updateFormat: (format: Format) => void;
   updateVideoCodec: (codec: VideoCodec) => void;
   updateAudioBitrate: (bitrate: AudioBitrate) => void;
+  updateConcurrentDownloads: (concurrent: number) => void;
+  updatePlaylistLimit: (limit: number) => void;
   togglePlaylist: () => void;
 }
 
@@ -89,6 +93,8 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
       downloadPlaylist: saved.downloadPlaylist || false,
       videoCodec: saved.videoCodec || 'h264',
       audioBitrate: saved.audioBitrate || 'auto',
+      concurrentDownloads: saved.concurrentDownloads || 1,
+      playlistLimit: saved.playlistLimit || 0, // 0 = unlimited
     };
   });
   
@@ -262,53 +268,89 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
 
   const startDownload = useCallback(async () => {
     const currentItems = itemsRef.current;
-    if (currentItems.length === 0) return;
+    // Only download items that are pending or had errors (not completed ones)
+    const itemsToDownload = currentItems.filter(
+      item => item.status === 'pending' || item.status === 'error'
+    );
+    
+    if (itemsToDownload.length === 0) return;
     
     setIsDownloading(true);
     isDownloadingRef.current = true;
     setCurrentPlaylistInfo(null);
     
-    // Reset all items to pending
-    setItems(items => items.map(item => ({
-      ...item,
-      status: 'pending' as const,
-      progress: 0,
-      speed: '',
-      eta: '',
-      error: undefined,
-      playlistIndex: undefined,
-      playlistTotal: undefined,
-    })));
+    // Reset only pending/error items, keep completed items as-is
+    setItems(items => items.map(item => {
+      if (item.status === 'pending' || item.status === 'error') {
+        return {
+          ...item,
+          status: 'pending' as const,
+          progress: 0,
+          speed: '',
+          eta: '',
+          error: undefined,
+          playlistIndex: undefined,
+          playlistTotal: undefined,
+        };
+      }
+      return item;
+    }));
 
-    try {
-      for (const item of currentItems) {
-        if (!isDownloadingRef.current) break;
+    const concurrentLimit = settings.concurrentDownloads || 1;
+    
+    // Download single item
+    const downloadItem = async (item: DownloadItem) => {
+      if (!isDownloadingRef.current) return;
+      
+      setItems(items => items.map(i => 
+        i.id === item.id ? { ...i, status: 'downloading' } : i
+      ));
+
+      try {
+        await invoke('download_video', {
+          id: item.id,
+          url: item.url,
+          outputPath: settings.outputPath,
+          quality: settings.quality,
+          format: settings.format,
+          downloadPlaylist: settings.downloadPlaylist,
+          videoCodec: settings.videoCodec,
+          audioBitrate: settings.audioBitrate,
+          playlistLimit: settings.playlistLimit,
+        });
         
         setItems(items => items.map(i => 
-          i.id === item.id ? { ...i, status: 'downloading' } : i
+          i.id === item.id ? { ...i, status: 'completed', progress: 100 } : i
         ));
-
-        try {
-          await invoke('download_video', {
-            id: item.id,
-            url: item.url,
-            outputPath: settings.outputPath,
-            quality: settings.quality,
-            format: settings.format,
-            downloadPlaylist: settings.downloadPlaylist,
-            videoCodec: settings.videoCodec,
-            audioBitrate: settings.audioBitrate,
-          });
-          
-          setItems(items => items.map(i => 
-            i.id === item.id ? { ...i, status: 'completed', progress: 100 } : i
-          ));
-        } catch (error) {
-          setItems(items => items.map(i => 
-            i.id === item.id ? { ...i, status: 'error', error: String(error) } : i
-          ));
-        }
+      } catch (error) {
+        setItems(items => items.map(i => 
+          i.id === item.id ? { ...i, status: 'error', error: String(error) } : i
+        ));
       }
+    };
+
+    try {
+      // Process items with concurrency limit
+      const queue = [...itemsToDownload];
+      const activeDownloads: Promise<void>[] = [];
+      
+      const processNext = async (): Promise<void> => {
+        while (isDownloadingRef.current && queue.length > 0) {
+          const item = queue.shift();
+          if (!item) break;
+          await downloadItem(item);
+        }
+      };
+      
+      // Calculate worker count BEFORE starting (queue.length changes during shift)
+      const workerCount = Math.min(concurrentLimit, itemsToDownload.length);
+      
+      // Start concurrent workers
+      for (let i = 0; i < workerCount; i++) {
+        activeDownloads.push(processNext());
+      }
+      
+      await Promise.all(activeDownloads);
     } finally {
       setIsDownloading(false);
       isDownloadingRef.current = false;
@@ -367,6 +409,24 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const updateConcurrentDownloads = useCallback((concurrentDownloads: number) => {
+    const value = Math.max(1, Math.min(5, concurrentDownloads));
+    setSettings(s => {
+      const newSettings = { ...s, concurrentDownloads: value };
+      saveSettings(newSettings);
+      return newSettings;
+    });
+  }, []);
+
+  const updatePlaylistLimit = useCallback((playlistLimit: number) => {
+    const value = Math.max(0, Math.min(100, playlistLimit)); // 0 = unlimited
+    setSettings(s => {
+      const newSettings = { ...s, playlistLimit: value };
+      saveSettings(newSettings);
+      return newSettings;
+    });
+  }, []);
+
   const togglePlaylist = useCallback(() => {
     setSettings(s => {
       const newSettings = { ...s, downloadPlaylist: !s.downloadPlaylist };
@@ -394,6 +454,8 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
     updateFormat,
     updateVideoCodec,
     updateAudioBitrate,
+    updateConcurrentDownloads,
+    updatePlaylistLimit,
     togglePlaylist,
   };
 

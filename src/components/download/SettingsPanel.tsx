@@ -5,11 +5,8 @@ import {
   Music,
   Settings2,
   HardDrive,
-  Film,
-  Volume2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
@@ -62,27 +59,16 @@ const audioFormatOptions: { value: Format; label: string }[] = [
   { value: 'opus', label: 'Opus' },
 ];
 
-const videoCodecOptions: { value: VideoCodec; label: string; desc: string }[] = [
-  { value: 'h264', label: 'H.264', desc: 'Best compatibility' },
-  { value: 'auto', label: 'Auto', desc: 'Best quality' },
-];
-
-const audioBitrateOptions: { value: AudioBitrate; label: string }[] = [
-  { value: 'auto', label: 'Auto' },
-  { value: '320', label: '320k' },
-  { value: '256', label: '256k' },
-  { value: '192', label: '192k' },
-  { value: '128', label: '128k' },
-];
-
 interface SettingsPanelProps {
   settings: DownloadSettings;
   disabled?: boolean;
-  totalFileSize?: number; // Total file size in bytes from fetched video info
+  totalFileSize?: number;
   onQualityChange: (quality: Quality) => void;
   onFormatChange: (format: Format) => void;
   onVideoCodecChange: (codec: VideoCodec) => void;
   onAudioBitrateChange: (bitrate: AudioBitrate) => void;
+  onConcurrentChange: (concurrent: number) => void;
+  onPlaylistLimitChange: (limit: number) => void;
   onPlaylistToggle: () => void;
   onSelectFolder: () => void;
 }
@@ -95,13 +81,14 @@ export function SettingsPanel({
   onFormatChange,
   onVideoCodecChange,
   onAudioBitrateChange,
+  onConcurrentChange,
+  onPlaylistLimitChange,
   onPlaylistToggle,
   onSelectFolder,
 }: SettingsPanelProps) {
   const isAudioOnly = settings.quality === 'audio' || ['mp3', 'm4a', 'opus'].includes(settings.format);
   const formatOptions = isAudioOnly ? audioFormatOptions : videoFormatOptions;
 
-  // Only show file size if we have actual data from video info
   const fileSizeDisplay = totalFileSize && totalFileSize > 0 
     ? formatFileSize(totalFileSize) 
     : '';
@@ -171,7 +158,7 @@ export function SettingsPanel({
       <button
         onClick={onPlaylistToggle}
         disabled={disabled}
-        title={settings.downloadPlaylist ? "Playlist mode ON - will download all videos" : "Playlist mode OFF - single video only"}
+        title={settings.downloadPlaylist ? "Playlist mode ON" : "Playlist mode OFF"}
         className={cn(
           "h-9 px-2.5 rounded-md border text-xs flex items-center gap-1.5 transition-colors",
           settings.downloadPlaylist 
@@ -197,77 +184,124 @@ export function SettingsPanel({
             <span className="hidden sm:inline text-xs">More</span>
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-72 p-4" align="end">
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h4 className="text-sm font-medium">Advanced Settings</h4>
-              {fileSizeDisplay && (
-                <Badge variant="outline" className="text-[10px] gap-1">
-                  <HardDrive className="w-3 h-3" />
-                  {fileSizeDisplay}
-                </Badge>
-              )}
-            </div>
-
-            {/* Video Codec */}
-            {!isAudioOnly && (
-              <div className="space-y-2">
-                <Label className="text-xs text-muted-foreground flex items-center gap-1.5">
-                  <Film className="w-3.5 h-3.5" />
-                  Video Codec
+        <PopoverContent 
+          className="w-80 p-0" 
+          align="end"
+          side="bottom"
+          sideOffset={8}
+        >
+          {/* Header */}
+          <div className="flex items-center justify-between px-4 py-3 border-b bg-muted/30">
+            <h4 className="text-sm font-medium">Advanced Settings</h4>
+            {fileSizeDisplay && (
+              <Badge variant="secondary" className="text-[10px] gap-1">
+                <HardDrive className="w-3 h-3" />
+                {fileSizeDisplay}
+              </Badge>
+            )}
+          </div>
+          
+          {/* Content - Grid Layout */}
+          <div className="p-4 space-y-4">
+            {/* Row 1: Codec & Bitrate */}
+            <div className="grid grid-cols-2 gap-3">
+              {/* Video Codec */}
+              <div className="space-y-1.5">
+                <Label className="text-[11px] text-muted-foreground">
+                  {isAudioOnly ? 'Audio Codec' : 'Video Codec'}
                 </Label>
                 <Select
                   value={settings.videoCodec}
                   onValueChange={onVideoCodecChange}
+                  disabled={disabled || isAudioOnly}
+                >
+                  <SelectTrigger className="h-8 text-xs">
+                    <SelectValue placeholder="Auto" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="h264" className="text-xs">H.264</SelectItem>
+                    <SelectItem value="vp9" className="text-xs">VP9</SelectItem>
+                    <SelectItem value="av1" className="text-xs">AV1</SelectItem>
+                    <SelectItem value="auto" className="text-xs">Auto</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Audio Bitrate */}
+              <div className="space-y-1.5">
+                <Label className="text-[11px] text-muted-foreground">Audio Bitrate</Label>
+                <Select
+                  value={settings.audioBitrate}
+                  onValueChange={onAudioBitrateChange}
                   disabled={disabled}
                 >
-                  <SelectTrigger className="h-9 text-xs">
+                  <SelectTrigger className="h-8 text-xs">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {videoCodecOptions.map((opt) => (
-                      <SelectItem key={opt.value} value={opt.value} className="text-xs">
-                        <span>{opt.label}</span>
-                        <span className="text-muted-foreground ml-1">({opt.desc})</span>
+                    <SelectItem value="auto" className="text-xs">Auto</SelectItem>
+                    <SelectItem value="320" className="text-xs">320k</SelectItem>
+                    <SelectItem value="256" className="text-xs">256k</SelectItem>
+                    <SelectItem value="192" className="text-xs">192k</SelectItem>
+                    <SelectItem value="128" className="text-xs">128k</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Row 2: Concurrent & Playlist Limit */}
+            <div className="grid grid-cols-2 gap-3">
+              {/* Concurrent Downloads */}
+              <div className="space-y-1.5">
+                <Label className="text-[11px] text-muted-foreground">Parallel Downloads</Label>
+                <Select
+                  value={String(settings.concurrentDownloads || 1)}
+                  onValueChange={(v) => onConcurrentChange(Number(v))}
+                  disabled={disabled}
+                >
+                  <SelectTrigger className="h-8 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {[1, 2, 3, 4, 5].map((n) => (
+                      <SelectItem key={n} value={String(n)} className="text-xs">
+                        {n} at a time
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
-            )}
 
-            {/* Audio Bitrate */}
-            <div className="space-y-2">
-              <Label className="text-xs text-muted-foreground flex items-center gap-1.5">
-                <Volume2 className="w-3.5 h-3.5" />
-                Audio Bitrate
-              </Label>
-              <Select
-                value={settings.audioBitrate}
-                onValueChange={onAudioBitrateChange}
-                disabled={disabled}
-              >
-                <SelectTrigger className="h-9 text-xs">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {audioBitrateOptions.map((opt) => (
-                    <SelectItem key={opt.value} value={opt.value} className="text-xs">
-                      {opt.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {/* Playlist Limit */}
+              <div className="space-y-1.5">
+                <Label className="text-[11px] text-muted-foreground">Playlist Limit</Label>
+                <Select
+                  value={String(settings.playlistLimit || 0)}
+                  onValueChange={(v) => onPlaylistLimitChange(Number(v))}
+                  disabled={disabled || !settings.downloadPlaylist}
+                >
+                  <SelectTrigger className={cn(
+                    "h-8 text-xs",
+                    !settings.downloadPlaylist && "opacity-50"
+                  )}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="0" className="text-xs">Unlimited</SelectItem>
+                    <SelectItem value="5" className="text-xs">5 videos</SelectItem>
+                    <SelectItem value="10" className="text-xs">10 videos</SelectItem>
+                    <SelectItem value="20" className="text-xs">20 videos</SelectItem>
+                    <SelectItem value="50" className="text-xs">50 videos</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
-            {/* Playlist Toggle in Popover */}
-            <div className="flex items-center justify-between py-2 border-t">
-              <div className="flex items-center gap-2">
+            {/* Playlist Toggle */}
+            <div className="flex items-center justify-between py-2 px-3 rounded-lg bg-muted/50">
+              <div className="flex items-center gap-2.5">
                 <ListVideo className="w-4 h-4 text-primary" />
-                <div>
-                  <p className="text-xs font-medium">Download Playlist</p>
-                  <p className="text-[10px] text-muted-foreground">Get all videos</p>
-                </div>
+                <span className="text-xs font-medium">Download full playlist</span>
               </div>
               <Switch
                 checked={settings.downloadPlaylist}
@@ -277,26 +311,18 @@ export function SettingsPanel({
             </div>
 
             {/* Output Folder */}
-            <div className="space-y-2 pt-2 border-t">
-              <Label className="text-xs text-muted-foreground">Output Folder</Label>
-              <div className="flex gap-2">
-                <Input
-                  value={settings.outputPath}
-                  readOnly
-                  className="flex-1 font-mono text-[10px] h-9"
-                  placeholder="Select folder..."
-                />
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={onSelectFolder}
-                  disabled={disabled}
-                  className="h-9 px-2.5"
-                  title="Browse for folder"
-                >
-                  <FolderOpen className="w-4 h-4" />
-                </Button>
-              </div>
+            <div className="space-y-1.5">
+              <Label className="text-[11px] text-muted-foreground">Save to</Label>
+              <button
+                onClick={onSelectFolder}
+                disabled={disabled}
+                className="w-full h-8 px-3 rounded-md border bg-background text-xs flex items-center gap-2 text-left hover:bg-muted/50 transition-colors"
+              >
+                <FolderOpen className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+                <span className="truncate flex-1 text-muted-foreground">
+                  {settings.outputPath || 'Select folder...'}
+                </span>
+              </button>
             </div>
           </div>
         </PopoverContent>
@@ -316,12 +342,12 @@ export function SettingsPanel({
         <span className="truncate hidden xs:inline">{outputFolderName}</span>
       </button>
 
-      {/* File Size Estimate Badge */}
+      {/* File Size Badge */}
       {fileSizeDisplay && (
         <Badge 
           variant="outline" 
           className="h-9 px-2.5 text-xs gap-1.5 hidden sm:flex"
-          title="Estimated file size"
+          title="Total file size"
         >
           <HardDrive className="w-3.5 h-3.5" />
           {fileSizeDisplay}

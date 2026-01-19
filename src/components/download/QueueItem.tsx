@@ -5,7 +5,7 @@ import {
   Clock,
   X,
   ListVideo,
-  RotateCcw,
+  Play,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { DownloadItem } from '@/lib/types';
@@ -34,143 +34,149 @@ export function QueueItem({
     ? `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`
     : null;
 
-  const getStatusInfo = () => {
-    switch (item.status) {
-      case 'completed':
-        return { 
-          icon: <CheckCircle2 className="w-4 h-4" />, 
-          color: 'text-emerald-500',
-          bgColor: 'bg-emerald-500/10',
-          borderColor: 'border-emerald-500/20',
-          label: 'Done'
-        };
-      case 'error':
-        return { 
-          icon: <XCircle className="w-4 h-4" />, 
-          color: 'text-red-500',
-          bgColor: 'bg-red-500/10',
-          borderColor: 'border-red-500/20',
-          label: 'Error'
-        };
-      case 'downloading':
-      case 'fetching':
-        return { 
-          icon: <Loader2 className="w-4 h-4 animate-spin" />, 
-          color: 'text-primary',
-          bgColor: 'bg-primary/10',
-          borderColor: 'border-primary/20',
-          label: item.status === 'fetching' ? 'Fetching...' : 'Downloading'
-        };
-      default:
-        return { 
-          icon: <Clock className="w-4 h-4" />, 
-          color: 'text-muted-foreground',
-          bgColor: 'bg-muted/50',
-          borderColor: 'border-border/50',
-          label: 'Pending'
-        };
-    }
-  };
-
-  const status = getStatusInfo();
   const isActive = item.status === 'downloading' || item.status === 'fetching';
+  const isCompleted = item.status === 'completed';
+  const isError = item.status === 'error';
+  const isPending = item.status === 'pending';
 
   return (
     <div
       className={cn(
-        "group relative flex gap-3 p-2 rounded-xl border transition-all duration-200",
-        status.bgColor,
-        status.borderColor,
-        isActive && "ring-1 ring-primary/30"
+        "group relative flex gap-3 p-2 rounded-xl transition-all duration-200",
+        "bg-card/50 hover:bg-card/80",
+        isActive && "bg-primary/5",
+        isCompleted && "bg-emerald-500/5",
+        isError && "bg-red-500/5"
       )}
     >
-      {/* Thumbnail with Progress Overlay */}
-      <div className="relative flex-shrink-0 w-24 h-16 sm:w-32 sm:h-20 rounded-lg overflow-hidden bg-muted">
+      {/* Thumbnail */}
+      <div className="relative flex-shrink-0 w-28 h-[72px] sm:w-36 sm:h-20 rounded-lg overflow-hidden bg-muted">
         {thumbnailUrl ? (
           <img 
             src={thumbnailUrl} 
             alt=""
-            className="w-full h-full object-cover"
+            className={cn(
+              "w-full h-full object-cover transition-all duration-300",
+              isCompleted && "opacity-60"
+            )}
             loading="lazy"
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center">
-            <ListVideo className="w-6 h-6 text-muted-foreground/50" />
+          <div className="w-full h-full flex items-center justify-center bg-muted">
+            <ListVideo className="w-8 h-8 text-muted-foreground/30" />
           </div>
         )}
         
-        {/* Progress Overlay */}
+        {/* Progress Overlay - Only when downloading */}
         {isActive && (
-          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent flex flex-col justify-end p-2 transition-all duration-300">
-            {/* Progress Bar */}
-            <div className="h-1.5 rounded-full overflow-hidden bg-black/40 backdrop-blur-sm border border-white/10 mb-1.5 shadow-sm">
-              <div 
-                className="h-full progress-animated rounded-full transition-all duration-300 shadow-[0_0_8px_rgba(255,255,255,0.3)]"
-                style={{ width: `${item.progress}%` }}
-              />
-            </div>
-            <div className="flex items-center justify-between text-[10px] text-white font-medium drop-shadow-md">
-              <span className="tabular-nums">{item.progress.toFixed(0)}%</span>
-              {item.speed && <span className="tabular-nums opacity-90">{item.speed}</span>}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent">
+            {/* Progress Bar at bottom */}
+            <div className="absolute bottom-0 left-0 right-0 p-2">
+              <div className="h-1 rounded-full overflow-hidden bg-white/20 mb-1">
+                <div 
+                  className="h-full bg-white rounded-full transition-all duration-300"
+                  style={{ width: `${item.progress}%` }}
+                />
+              </div>
+              <div className="flex items-center justify-between text-[10px] text-white/90 font-medium">
+                <span>{item.progress.toFixed(0)}%</span>
+                {item.speed && <span>{item.speed}</span>}
+              </div>
             </div>
           </div>
         )}
 
         {/* Completed Overlay */}
-        {item.status === 'completed' && (
-          <div className="absolute inset-0 bg-emerald-500/20 flex items-center justify-center">
-            <CheckCircle2 className="w-8 h-8 text-emerald-500 drop-shadow-lg" />
+        {isCompleted && (
+          <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-full bg-emerald-500 flex items-center justify-center shadow-lg">
+              <CheckCircle2 className="w-6 h-6 text-white" />
+            </div>
           </div>
         )}
 
         {/* Error Overlay */}
-        {item.status === 'error' && (
-          <div className="absolute inset-0 bg-red-500/20 flex items-center justify-center">
-            <RotateCcw className="w-6 h-6 text-red-500" />
+        {isError && (
+          <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-full bg-red-500 flex items-center justify-center shadow-lg">
+              <XCircle className="w-6 h-6 text-white" />
+            </div>
           </div>
         )}
 
-        {/* Playlist Badge on Thumbnail */}
+        {/* Pending Overlay */}
+        {isPending && (
+          <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+            <div className="w-10 h-10 rounded-full bg-white/90 flex items-center justify-center shadow-lg">
+              <Play className="w-5 h-5 text-black ml-0.5" />
+            </div>
+          </div>
+        )}
+
+        {/* Playlist Badge */}
         {item.isPlaylist && showPlaylistBadge && (
-          <div className="absolute top-1 left-1 px-1.5 py-0.5 rounded bg-black/70 text-white text-[10px] flex items-center gap-1">
+          <div className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded bg-black/70 text-white text-[10px] flex items-center gap-1">
             <ListVideo className="w-3 h-3" />
             <span>Playlist</span>
           </div>
         )}
 
-        {/* Playlist Progress on Thumbnail */}
+        {/* Playlist Progress */}
         {item.playlistIndex && item.playlistTotal && (
-          <div className="absolute top-1 right-1 px-1.5 py-0.5 rounded bg-black/70 text-white text-[10px] font-medium">
+          <div className="absolute top-1.5 right-1.5 px-1.5 py-0.5 rounded bg-black/70 text-white text-[10px] font-medium tabular-nums">
             {item.playlistIndex}/{item.playlistTotal}
+          </div>
+        )}
+
+        {/* Duration/ETA Badge */}
+        {isActive && item.eta && (
+          <div className="absolute top-1.5 right-1.5 px-1.5 py-0.5 rounded bg-primary text-primary-foreground text-[10px] font-medium">
+            {item.eta}
           </div>
         )}
       </div>
       
       {/* Content */}
-      <div className="flex-1 min-w-0 flex flex-col justify-center gap-1">
+      <div className="flex-1 min-w-0 flex flex-col justify-center py-0.5">
         {/* Title */}
         <p 
-          className="text-sm font-medium leading-tight line-clamp-2" 
+          className={cn(
+            "text-sm font-medium leading-snug line-clamp-2 transition-colors",
+            isCompleted && "text-muted-foreground"
+          )}
           title={item.title}
         >
           {item.title}
         </p>
         
-        {/* Status & Meta */}
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className={cn("text-xs flex items-center gap-1", status.color)}>
-            {status.icon}
-            <span className="hidden xs:inline">{status.label}</span>
+        {/* Status Row */}
+        <div className="flex items-center gap-2 mt-1.5">
+          {/* Status Badge */}
+          <span className={cn(
+            "inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium",
+            isPending && "bg-muted text-muted-foreground",
+            isActive && "bg-primary/10 text-primary",
+            isCompleted && "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
+            isError && "bg-red-500/10 text-red-600 dark:text-red-400"
+          )}>
+            {isPending && <Clock className="w-3 h-3" />}
+            {isActive && <Loader2 className="w-3 h-3 animate-spin" />}
+            {isCompleted && <CheckCircle2 className="w-3 h-3" />}
+            {isError && <XCircle className="w-3 h-3" />}
+            <span>
+              {isPending && 'Pending'}
+              {isActive && (item.status === 'fetching' ? 'Fetching' : 'Downloading')}
+              {isCompleted && 'Completed'}
+              {isError && 'Failed'}
+            </span>
           </span>
           
-          {isActive && item.eta && (
-            <span className="text-xs text-muted-foreground hidden sm:inline">
-              ETA: {item.eta}
-            </span>
-          )}
-          
-          {item.status === 'error' && item.error && (
-            <span className="text-xs text-red-500 truncate max-w-[150px] sm:max-w-none" title={item.error}>
+          {/* Error Message */}
+          {isError && item.error && (
+            <span 
+              className="text-xs text-red-500/80 truncate max-w-[120px] sm:max-w-[200px]" 
+              title={item.error}
+            >
               {item.error}
             </span>
           )}
@@ -184,9 +190,8 @@ export function QueueItem({
         title="Remove from queue"
         className={cn(
           "absolute top-2 right-2 p-1.5 rounded-full transition-all",
-          "bg-background/80 hover:bg-background text-muted-foreground hover:text-foreground",
+          "bg-black/50 hover:bg-black/70 text-white/70 hover:text-white",
           "opacity-0 group-hover:opacity-100",
-          "sm:opacity-0 sm:group-hover:opacity-100",
           "disabled:opacity-50 disabled:cursor-not-allowed"
         )}
       >

@@ -232,20 +232,21 @@ fn build_format_string(quality: &str, format: &str, video_codec: &str) -> String
         _ => None,
     };
     
-    // Build codec filter
-    let _codec_filter = if video_codec == "h264" {
-        "[vcodec^=avc]"
-    } else {
-        "" // auto - no codec filter, let yt-dlp choose best
+    // Build codec filter based on selection
+    // h264 = avc, vp9 = vp9/vp09, av1 = av01
+    let codec_filter = match video_codec {
+        "h264" => "[vcodec^=avc]",
+        "vp9" => "[vcodec^=vp9]",
+        "av1" => "[vcodec^=av01]",
+        _ => "", // auto - no codec filter
     };
     
     if format == "mp4" {
         if let Some(h) = height {
-            // With H264: prefer avc codec, fallback to any codec
-            if video_codec == "h264" {
+            if !codec_filter.is_empty() {
                 format!(
-                    "bestvideo[height<={}][vcodec^=avc][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height<={}][vcodec^=avc]+bestaudio/bestvideo[height<={}][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height<={}]+bestaudio/best[height<={}]/best",
-                    h, h, h, h, h
+                    "bestvideo[height<={}]{}[ext=mp4]+bestaudio[ext=m4a]/bestvideo[height<={}]{}+bestaudio/bestvideo[height<={}][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height<={}]+bestaudio/best[height<={}]/best",
+                    h, codec_filter, h, codec_filter, h, h, h
                 )
             } else {
                 format!(
@@ -255,25 +256,28 @@ fn build_format_string(quality: &str, format: &str, video_codec: &str) -> String
             }
         } else {
             // Best quality
-            if video_codec == "h264" {
-                "bestvideo[vcodec^=avc][ext=mp4]+bestaudio[ext=m4a]/bestvideo[vcodec^=avc]+bestaudio/bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo+bestaudio/best".to_string()
+            if !codec_filter.is_empty() {
+                format!(
+                    "bestvideo{}[ext=mp4]+bestaudio[ext=m4a]/bestvideo{}+bestaudio/bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo+bestaudio/best",
+                    codec_filter, codec_filter
+                )
             } else {
                 "bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo+bestaudio/best".to_string()
             }
         }
     } else if let Some(h) = height {
         // Non-MP4 formats (MKV, WebM)
-        if video_codec == "h264" {
+        if !codec_filter.is_empty() {
             format!(
-                "bestvideo[height<={}][vcodec^=avc]+bestaudio/bestvideo[height<={}]+bestaudio/best[height<={}]/best",
-                h, h, h
+                "bestvideo[height<={}]{}+bestaudio/bestvideo[height<={}]+bestaudio/best[height<={}]/best",
+                h, codec_filter, h, h
             )
         } else {
             format!("bestvideo[height<={}]+bestaudio/best[height<={}]/best", h, h)
         }
     } else {
-        if video_codec == "h264" {
-            "bestvideo[vcodec^=avc]+bestaudio/bestvideo+bestaudio/best".to_string()
+        if !codec_filter.is_empty() {
+            format!("bestvideo{}+bestaudio/bestvideo+bestaudio/best", codec_filter)
         } else {
             "bestvideo+bestaudio/best".to_string()
         }
@@ -347,6 +351,7 @@ async fn download_video(
     download_playlist: bool,
     video_codec: String,
     audio_bitrate: String,
+    playlist_limit: Option<u32>,
 ) -> Result<(), String> {
     CANCEL_FLAG.store(false, Ordering::SeqCst);
     
@@ -359,11 +364,22 @@ async fn download_video(
         format_string,
         "-o".to_string(),
         output_template,
+        // Clean up intermediate files after merging
+        "--no-keep-video".to_string(),
+        "--no-keep-fragments".to_string(),
     ];
     
     // Handle playlist option
     if !download_playlist {
         args.push("--no-playlist".to_string());
+    } else {
+        // Apply playlist limit if set (> 0)
+        if let Some(limit) = playlist_limit {
+            if limit > 0 {
+                args.push("--playlist-end".to_string());
+                args.push(limit.to_string());
+            }
+        }
     }
     
     // Audio formats - extract audio and convert

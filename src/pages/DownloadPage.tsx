@@ -24,6 +24,8 @@ export function DownloadPage() {
     updateFormat,
     updateVideoCodec,
     updateAudioBitrate,
+    updateConcurrentDownloads,
+    updatePlaylistLimit,
     togglePlaylist,
   } = useDownload();
 
@@ -65,6 +67,8 @@ export function DownloadPage() {
             onFormatChange={updateFormat}
             onVideoCodecChange={updateVideoCodec}
             onAudioBitrateChange={updateAudioBitrate}
+            onConcurrentChange={updateConcurrentDownloads}
+            onPlaylistLimitChange={updatePlaylistLimit}
             onPlaylistToggle={togglePlaylist}
             onSelectFolder={selectOutputFolder}
           />
