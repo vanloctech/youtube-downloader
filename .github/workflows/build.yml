@@ -303,6 +303,31 @@ jobs:
           echo "Generated latest.json:"
           cat latest.json
 
+      - name: Generate SHA256 checksums
+        run: |
+          cd artifacts
+          echo "# SHA256 Checksums for Youwee $GITHUB_REF_NAME" > ../SHA256SUMS.txt
+          echo "# Generated: $(date -u)" >> ../SHA256SUMS.txt
+          echo "" >> ../SHA256SUMS.txt
+          
+          # Generate checksums for all installer files
+          find . -type f \( \
+            -name "*.dmg" -o \
+            -name "*.msi" -o \
+            -name "*.exe" -o \
+            -name "*.deb" -o \
+            -name "*.AppImage" -o \
+            -name "*.app.tar.gz" \
+          \) ! -name "*.sig" | while read file; do
+            # Get just the filename without path
+            filename=$(basename "$file")
+            sha256sum "$file" | sed "s|./||; s|.*/||" >> ../SHA256SUMS.txt
+          done
+          
+          cd ..
+          echo "Generated SHA256SUMS.txt:"
+          cat SHA256SUMS.txt
+
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
@@ -345,6 +370,9 @@ jobs:
             
             ## 🔧 Optional
             - FFmpeg (recommended for best compatibility)
+            
+            ## 🔐 Verify Downloads
+            You can verify your download using the `SHA256SUMS.txt` file.
           files: |
             artifacts/**/*.dmg
             artifacts/**/*.deb
@@ -357,6 +385,7 @@ jobs:
             artifacts/**/*.app.tar.gz
             artifacts/**/*.app.tar.gz.sig
             latest.json
+            SHA256SUMS.txt
 
       - name: Update 'latest' tag
         run: |
@@ -396,6 +425,9 @@ jobs:
             
             ## 🔄 Auto-Update
             The app will automatically check for updates and notify you when a new version is available.
+            
+            ## 🔐 Verify Downloads
+            Use `SHA256SUMS.txt` to verify your download integrity.
           files: |
             artifacts/**/*.dmg
             artifacts/**/*.deb
@@ -408,3 +440,4 @@ jobs:
             artifacts/**/*.app.tar.gz
             artifacts/**/*.app.tar.gz.sig
             latest.json
+            SHA256SUMS.txt
