@@ -9,6 +9,13 @@ export interface YtdlpVersionInfo {
   binary_path: string;
 }
 
+export interface FfmpegStatus {
+  installed: boolean;
+  version: string | null;
+  binary_path: string | null;
+  is_system: boolean;
+}
+
 interface DependenciesContextType {
   // yt-dlp state
   ytdlpInfo: YtdlpVersionInfo | null;
@@ -19,10 +26,21 @@ interface DependenciesContextType {
   error: string | null;
   updateSuccess: boolean;
   
+  // FFmpeg state
+  ffmpegStatus: FfmpegStatus | null;
+  ffmpegLoading: boolean;
+  ffmpegDownloading: boolean;
+  ffmpegError: string | null;
+  ffmpegSuccess: boolean;
+  
   // Actions
   refreshYtdlpVersion: () => Promise<void>;
   checkForUpdate: () => Promise<void>;
   updateYtdlp: () => Promise<void>;
+  
+  // FFmpeg actions
+  checkFfmpeg: () => Promise<void>;
+  downloadFfmpeg: () => Promise<void>;
 }
 
 const DependenciesContext = createContext<DependenciesContextType | null>(null);
@@ -36,6 +54,13 @@ export function DependenciesProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null);
   const [updateSuccess, setUpdateSuccess] = useState(false);
   const [initialized, setInitialized] = useState(false);
+  
+  // FFmpeg state
+  const [ffmpegStatus, setFfmpegStatus] = useState<FfmpegStatus | null>(null);
+  const [ffmpegLoading, setFfmpegLoading] = useState(false);
+  const [ffmpegDownloading, setFfmpegDownloading] = useState(false);
+  const [ffmpegError, setFfmpegError] = useState<string | null>(null);
+  const [ffmpegSuccess, setFfmpegSuccess] = useState(false);
 
   // Load yt-dlp version (only once on first mount)
   const refreshYtdlpVersion = useCallback(async () => {
@@ -51,13 +76,53 @@ export function DependenciesProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  // Check FFmpeg status
+  const checkFfmpeg = useCallback(async () => {
+    setFfmpegLoading(true);
+    setFfmpegError(null);
+    try {
+      const status = await invoke<FfmpegStatus>('check_ffmpeg');
+      setFfmpegStatus(status);
+    } catch (err) {
+      setFfmpegError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setFfmpegLoading(false);
+    }
+  }, []);
+
+  // Download FFmpeg
+  const downloadFfmpeg = useCallback(async () => {
+    setFfmpegDownloading(true);
+    setFfmpegError(null);
+    setFfmpegSuccess(false);
+    try {
+      const version = await invoke<string>('download_ffmpeg');
+      setFfmpegStatus({
+        installed: true,
+        version,
+        binary_path: null, // Will be updated on next check
+        is_system: false,
+      });
+      setFfmpegSuccess(true);
+      // Hide success message after 3 seconds
+      setTimeout(() => setFfmpegSuccess(false), 3000);
+      // Refresh to get full status
+      await checkFfmpeg();
+    } catch (err) {
+      setFfmpegError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setFfmpegDownloading(false);
+    }
+  }, [checkFfmpeg]);
+
   // Initialize on first mount
   useEffect(() => {
     if (!initialized) {
       setInitialized(true);
       refreshYtdlpVersion();
+      checkFfmpeg();
     }
-  }, [initialized, refreshYtdlpVersion]);
+  }, [initialized, refreshYtdlpVersion, checkFfmpeg]);
 
   // Check for updates
   const checkForUpdate = useCallback(async () => {
@@ -106,6 +171,14 @@ export function DependenciesProvider({ children }: { children: ReactNode }) {
         refreshYtdlpVersion,
         checkForUpdate,
         updateYtdlp,
+        // FFmpeg
+        ffmpegStatus,
+        ffmpegLoading,
+        ffmpegDownloading,
+        ffmpegError,
+        ffmpegSuccess,
+        checkFfmpeg,
+        downloadFfmpeg,
       }}
     >
       {children}

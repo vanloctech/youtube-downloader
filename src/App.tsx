@@ -1,16 +1,41 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ThemeProvider } from '@/contexts/ThemeContext';
-import { DependenciesProvider } from '@/contexts/DependenciesContext';
+import { DependenciesProvider, useDependencies } from '@/contexts/DependenciesContext';
 import { DownloadProvider, useDownload } from '@/contexts/DownloadContext';
 import { UpdaterProvider, useUpdater } from '@/contexts/UpdaterContext';
 import { MainLayout } from '@/components/layout';
 import type { Page } from '@/components/layout';
 import { DownloadPage, SettingsPage } from '@/pages';
 import { UpdateDialog } from '@/components/UpdateDialog';
+import { FFmpegDialog } from '@/components/FFmpegDialog';
 
 function AppContent() {
   const [currentPage, setCurrentPage] = useState<Page>('download');
+  const [showFfmpegDialog, setShowFfmpegDialog] = useState(false);
+  const [ffmpegChecked, setFfmpegChecked] = useState(false);
   const updater = useUpdater();
+  const { ffmpegStatus, ffmpegLoading } = useDependencies();
+
+  // Show FFmpeg dialog on startup if not installed
+  useEffect(() => {
+    if (!ffmpegLoading && !ffmpegChecked) {
+      setFfmpegChecked(true);
+      if (ffmpegStatus && !ffmpegStatus.installed) {
+        // Small delay to let the app render first
+        const timer = setTimeout(() => {
+          setShowFfmpegDialog(true);
+        }, 500);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [ffmpegStatus, ffmpegLoading, ffmpegChecked]);
+
+  // Close FFmpeg dialog when FFmpeg gets installed
+  useEffect(() => {
+    if (ffmpegStatus?.installed && showFfmpegDialog) {
+      setShowFfmpegDialog(false);
+    }
+  }, [ffmpegStatus, showFfmpegDialog]);
 
   return (
     <>
@@ -29,6 +54,10 @@ function AppContent() {
         onDismiss={updater.dismissUpdate}
         onRetry={updater.checkForUpdate}
       />
+
+      {showFfmpegDialog && (
+        <FFmpegDialog onDismiss={() => setShowFfmpegDialog(false)} />
+      )}
     </>
   );
 }

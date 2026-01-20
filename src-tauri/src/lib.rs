@@ -402,6 +402,14 @@ async fn download_video(
         "--no-keep-fragments".to_string(),
     ];
     
+    // Add FFmpeg location if available (for merging video+audio)
+    if let Some(ffmpeg_path) = get_ffmpeg_path(&app).await {
+        if let Some(parent) = ffmpeg_path.parent() {
+            args.push("--ffmpeg-location".to_string());
+            args.push(parent.to_string_lossy().to_string());
+        }
+    }
+    
     // Handle playlist option
     if !download_playlist {
         args.push("--no-playlist".to_string());
@@ -736,6 +744,23 @@ struct GitHubRelease {
     tag_name: String,
 }
 
+/// FFmpeg version information
+#[derive(Clone, Serialize)]
+pub struct FfmpegVersionInfo {
+    pub version: String,
+    pub is_system: bool,
+    pub binary_path: String,
+}
+
+/// FFmpeg status response
+#[derive(Clone, Serialize)]
+pub struct FfmpegStatus {
+    pub installed: bool,
+    pub version: Option<String>,
+    pub binary_path: Option<String>,
+    pub is_system: bool,
+}
+
 /// Check for yt-dlp updates from GitHub
 #[tauri::command]
 async fn check_ytdlp_update() -> Result<String, String> {
@@ -965,6 +990,373 @@ async fn update_ytdlp(app: AppHandle) -> Result<String, String> {
     Ok(new_version)
 }
 
+/// Get the FFmpeg binary path (app data or system)
+async fn get_ffmpeg_path(app: &AppHandle) -> Option<std::path::PathBuf> {
+    // First check app data directory
+    if let Ok(app_data_dir) = app.path().app_data_dir() {
+        let bin_dir = app_data_dir.join("bin");
+        #[cfg(windows)]
+        let ffmpeg_path = bin_dir.join("ffmpeg.exe");
+        #[cfg(not(windows))]
+        let ffmpeg_path = bin_dir.join("ffmpeg");
+        
+        if ffmpeg_path.exists() {
+            return Some(ffmpeg_path);
+        }
+    }
+    
+    // Fallback: check if system ffmpeg is available
+    #[cfg(unix)]
+    {
+        let output = Command::new("which")
+            .arg("ffmpeg")
+            .output()
+            .await
+            .ok()?;
+        
+        if output.status.success() {
+            let path_str = String::from_utf8_lossy(&output.stdout).trim().to_string();
+            if !path_str.is_empty() {
+                return Some(std::path::PathBuf::from(path_str));
+            }
+        }
+    }
+    
+    #[cfg(windows)]
+    {
+        let output = Command::new("where")
+            .arg("ffmpeg")
+            .output()
+            .await
+            .ok()?;
+        
+        if output.status.success() {
+            let path_str = String::from_utf8_lossy(&output.stdout).lines().next()?.to_string();
+            if !path_str.is_empty() {
+                return Some(std::path::PathBuf::from(path_str));
+            }
+        }
+    }
+    
+    None
+}
+
+/// Check if FFmpeg is installed and get its status
+#[tauri::command]
+async fn check_ffmpeg(app: AppHandle) -> Result<FfmpegStatus, String> {
+    // First check app data directory
+    if let Ok(app_data_dir) = app.path().app_data_dir() {
+        let bin_dir = app_data_dir.join("bin");
+        #[cfg(windows)]
+        let ffmpeg_path = bin_dir.join("ffmpeg.exe");
+        #[cfg(not(windows))]
+        let ffmpeg_path = bin_dir.join("ffmpeg");
+        
+        if ffmpeg_path.exists() {
+            // Get version
+            let output = Command::new(&ffmpeg_path)
+                .args(["-version"])
+                .stdout(Stdio::piped())
+                .stderr(Stdio::piped())
+                .output()
+                .await;
+            
+            if let Ok(output) = output {
+                let stdout = String::from_utf8_lossy(&output.stdout);
+                let version = parse_ffmpeg_version(&stdout);
+                return Ok(FfmpegStatus {
+                    installed: true,
+                    version: Some(version),
+                    binary_path: Some(ffmpeg_path.to_string_lossy().to_string()),
+                    is_system: false,
+                });
+            }
+        }
+    }
+    
+    // Check system FFmpeg
+    let output = Command::new("ffmpeg")
+        .args(["-version"])
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .output()
+        .await;
+    
+    match output {
+        Ok(output) if output.status.success() => {
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            let version = parse_ffmpeg_version(&stdout);
+            
+            // Get binary path
+            #[cfg(unix)]
+            let path = Command::new("which")
+                .arg("ffmpeg")
+                .output()
+                .await
+                .ok()
+                .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string());
+            
+            #[cfg(windows)]
+            let path = Command::new("where")
+                .arg("ffmpeg")
+                .output()
+                .await
+                .ok()
+                .map(|o| String::from_utf8_lossy(&o.stdout).lines().next().unwrap_or("").to_string());
+            
+            Ok(FfmpegStatus {
+                installed: true,
+                version: Some(version),
+                binary_path: path,
+                is_system: true,
+            })
+        }
+        _ => Ok(FfmpegStatus {
+            installed: false,
+            version: None,
+            binary_path: None,
+            is_system: false,
+        }),
+    }
+}
+
+/// Parse FFmpeg version from output
+fn parse_ffmpeg_version(output: &str) -> String {
+    // ffmpeg version N-xxxxx-gxxxxxxx or ffmpeg version 6.0
+    if let Some(line) = output.lines().next() {
+        if let Some(version_part) = line.strip_prefix("ffmpeg version ") {
+            // Take first word (version number)
+            return version_part.split_whitespace().next().unwrap_or("unknown").to_string();
+        }
+    }
+    "unknown".to_string()
+}
+
+/// Get the appropriate FFmpeg download URL for current platform
+fn get_ffmpeg_download_info() -> (&'static str, &'static str) {
+    // Returns (download_url, archive_type)
+    #[cfg(target_os = "macos")]
+    {
+        #[cfg(target_arch = "aarch64")]
+        { ("https://github.com/vanloctech/youwee/releases/download/ffmpeg-v1.0.0/ffmpeg-macos-arm64.tar.gz", "tar.gz") }
+        #[cfg(target_arch = "x86_64")]
+        { ("https://github.com/vanloctech/youwee/releases/download/ffmpeg-v1.0.0/ffmpeg-macos-x64.tar.gz", "tar.gz") }
+        #[cfg(not(any(target_arch = "aarch64", target_arch = "x86_64")))]
+        { ("https://github.com/vanloctech/youwee/releases/download/ffmpeg-v1.0.0/ffmpeg-macos-arm64.tar.gz", "tar.gz") }
+    }
+    #[cfg(target_os = "windows")]
+    { ("https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip", "zip") }
+    #[cfg(target_os = "linux")]
+    { ("https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz", "tar.xz") }
+    #[cfg(not(any(target_os = "macos", target_os = "windows", target_os = "linux")))]
+    { ("", "") }
+}
+
+/// Download and install FFmpeg
+#[tauri::command]
+async fn download_ffmpeg(app: AppHandle) -> Result<String, String> {
+    let (download_url, archive_type) = get_ffmpeg_download_info();
+    
+    if download_url.is_empty() {
+        return Err("Unsupported platform".to_string());
+    }
+    
+    // Get app data directory
+    let app_data_dir = app.path().app_data_dir()
+        .map_err(|e| format!("Failed to get app data directory: {}", e))?;
+    
+    let bin_dir = app_data_dir.join("bin");
+    
+    // Create bin directory if it doesn't exist
+    tokio::fs::create_dir_all(&bin_dir)
+        .await
+        .map_err(|e| format!("Failed to create bin directory: {}", e))?;
+    
+    // Create HTTP client
+    let client = reqwest::Client::builder()
+        .user_agent("Youwee/0.2.1")
+        .timeout(std::time::Duration::from_secs(600)) // 10 min timeout for large downloads
+        .build()
+        .map_err(|e| format!("Failed to create HTTP client: {}", e))?;
+    
+    // Download the archive
+    let response = client
+        .get(download_url)
+        .send()
+        .await
+        .map_err(|e| {
+            if e.is_timeout() {
+                "Download timed out. Please try again.".to_string()
+            } else if e.is_connect() {
+                "Unable to connect. Please check your internet connection.".to_string()
+            } else {
+                format!("Failed to download FFmpeg: {}", e)
+            }
+        })?;
+    
+    let status = response.status();
+    if !status.is_success() {
+        return Err(format!("Download failed with status: {}", status));
+    }
+    
+    let bytes = response
+        .bytes()
+        .await
+        .map_err(|e| format!("Failed to read response: {}", e))?;
+    
+    // Extract the archive based on type
+    #[cfg(windows)]
+    let ffmpeg_binary = "ffmpeg.exe";
+    #[cfg(not(windows))]
+    let ffmpeg_binary = "ffmpeg";
+    
+    let ffmpeg_path = bin_dir.join(ffmpeg_binary);
+    
+    match archive_type {
+        "tar.gz" => {
+            extract_tar_gz(&bytes, &bin_dir, ffmpeg_binary).await?;
+        }
+        "tar.xz" => {
+            extract_tar_xz(&bytes, &bin_dir, ffmpeg_binary).await?;
+        }
+        "zip" => {
+            extract_zip(&bytes, &bin_dir, ffmpeg_binary).await?;
+        }
+        _ => return Err("Unsupported archive type".to_string()),
+    }
+    
+    // Set executable permission on Unix
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let mut perms = tokio::fs::metadata(&ffmpeg_path)
+            .await
+            .map_err(|e| format!("Failed to get file metadata: {}", e))?
+            .permissions();
+        perms.set_mode(0o755);
+        tokio::fs::set_permissions(&ffmpeg_path, perms)
+            .await
+            .map_err(|e| format!("Failed to set permissions: {}", e))?;
+    }
+    
+    // Verify installation by getting version
+    let output = Command::new(&ffmpeg_path)
+        .args(["-version"])
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .output()
+        .await
+        .map_err(|e| format!("Failed to verify FFmpeg installation: {}", e))?;
+    
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let version = parse_ffmpeg_version(&stdout);
+    
+    Ok(version)
+}
+
+/// Extract tar.gz archive (for macOS)
+async fn extract_tar_gz(data: &[u8], dest_dir: &std::path::Path, target_binary: &str) -> Result<(), String> {
+    use flate2::read::GzDecoder;
+    use tar::Archive;
+    use std::io::Cursor;
+    
+    let cursor = Cursor::new(data);
+    let gz = GzDecoder::new(cursor);
+    let mut archive = Archive::new(gz);
+    
+    let entries = archive.entries()
+        .map_err(|e| format!("Failed to read archive: {}", e))?;
+    
+    for entry in entries {
+        let mut entry = entry.map_err(|e| format!("Failed to read entry: {}", e))?;
+        let path = entry.path().map_err(|e| format!("Failed to get path: {}", e))?;
+        let path_str = path.to_string_lossy();
+        
+        // Look for ffmpeg binary in any path
+        if path_str.ends_with("/ffmpeg") || path_str == "ffmpeg" {
+            let dest_path = dest_dir.join(target_binary);
+            entry.unpack(&dest_path)
+                .map_err(|e| format!("Failed to extract ffmpeg: {}", e))?;
+            return Ok(());
+        }
+    }
+    
+    Err("FFmpeg binary not found in archive".to_string())
+}
+
+/// Extract tar.xz archive (for Linux)
+async fn extract_tar_xz(data: &[u8], dest_dir: &std::path::Path, target_binary: &str) -> Result<(), String> {
+    use xz2::read::XzDecoder;
+    use tar::Archive;
+    use std::io::Cursor;
+    
+    let cursor = Cursor::new(data);
+    let xz = XzDecoder::new(cursor);
+    let mut archive = Archive::new(xz);
+    
+    let entries = archive.entries()
+        .map_err(|e| format!("Failed to read archive: {}", e))?;
+    
+    for entry in entries {
+        let mut entry = entry.map_err(|e| format!("Failed to read entry: {}", e))?;
+        let path = entry.path().map_err(|e| format!("Failed to get path: {}", e))?;
+        let path_str = path.to_string_lossy();
+        
+        // Look for ffmpeg binary in any path
+        if path_str.ends_with("/ffmpeg") || path_str == "ffmpeg" {
+            let dest_path = dest_dir.join(target_binary);
+            entry.unpack(&dest_path)
+                .map_err(|e| format!("Failed to extract ffmpeg: {}", e))?;
+            return Ok(());
+        }
+    }
+    
+    Err("FFmpeg binary not found in archive".to_string())
+}
+
+/// Extract zip archive (for Windows)
+async fn extract_zip(data: &[u8], dest_dir: &std::path::Path, target_binary: &str) -> Result<(), String> {
+    use zip::ZipArchive;
+    use std::io::Cursor;
+    
+    let cursor = Cursor::new(data);
+    let mut archive = ZipArchive::new(cursor)
+        .map_err(|e| format!("Failed to open zip: {}", e))?;
+    
+    for i in 0..archive.len() {
+        let mut file = archive.by_index(i)
+            .map_err(|e| format!("Failed to read zip entry: {}", e))?;
+        
+        let name = file.name().to_string();
+        
+        // Look for ffmpeg.exe in the bin folder
+        if name.ends_with("/bin/ffmpeg.exe") || name == "ffmpeg.exe" {
+            let dest_path = dest_dir.join(target_binary);
+            let mut outfile = std::fs::File::create(&dest_path)
+                .map_err(|e| format!("Failed to create file: {}", e))?;
+            std::io::copy(&mut file, &mut outfile)
+                .map_err(|e| format!("Failed to extract: {}", e))?;
+            return Ok(());
+        }
+    }
+    
+    Err("FFmpeg binary not found in archive".to_string())
+}
+
+/// Get FFmpeg binary path for yt-dlp to use
+#[tauri::command]
+async fn get_ffmpeg_path_for_ytdlp(app: AppHandle) -> Result<Option<String>, String> {
+    if let Some(path) = get_ffmpeg_path(&app).await {
+        // Return the directory containing ffmpeg, not the binary itself
+        // yt-dlp's --ffmpeg-location expects a directory
+        if let Some(parent) = path.parent() {
+            return Ok(Some(parent.to_string_lossy().to_string()));
+        }
+        return Ok(Some(path.to_string_lossy().to_string()));
+    }
+    Ok(None)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -989,7 +1381,10 @@ pub fn run() {
             get_video_info,
             get_ytdlp_version,
             check_ytdlp_update,
-            update_ytdlp
+            update_ytdlp,
+            check_ffmpeg,
+            download_ffmpeg,
+            get_ffmpeg_path_for_ytdlp
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

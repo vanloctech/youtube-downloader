@@ -18,6 +18,7 @@ import {
   AlertCircle,
   Loader2,
   Sparkles,
+  Film,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -50,6 +51,14 @@ export function SettingsPage() {
     updateSuccess,
     checkForUpdate,
     updateYtdlp,
+    // FFmpeg
+    ffmpegStatus,
+    ffmpegLoading,
+    ffmpegDownloading,
+    ffmpegError,
+    ffmpegSuccess,
+    checkFfmpeg,
+    downloadFfmpeg,
   } = useDependencies();
 
   // Compare versions to check if update is available
@@ -362,6 +371,113 @@ export function SettingsPage() {
               >
                 <Github className="w-3 h-3" />
                 <span>yt-dlp/yt-dlp</span>
+                <ExternalLink className="w-3 h-3" />
+              </a>
+            </div>
+          </div>
+
+          {/* FFmpeg row */}
+          <div className="rounded-xl border bg-card/50 backdrop-blur-sm overflow-hidden">
+            <div className="p-4">
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex items-start gap-3 min-w-0">
+                  <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center flex-shrink-0">
+                    <Film className="w-5 h-5 text-white" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-medium">FFmpeg</span>
+                      {ffmpegLoading ? (
+                        <Badge variant="secondary" className="text-xs">
+                          <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                          Checking...
+                        </Badge>
+                      ) : ffmpegStatus?.installed ? (
+                        <Badge variant="secondary" className="text-xs font-mono">
+                          {ffmpegStatus.version || 'Installed'}
+                        </Badge>
+                      ) : (
+                        <Badge variant="destructive" className="text-xs">
+                          Not found
+                        </Badge>
+                      )}
+                      {ffmpegStatus?.is_system && (
+                        <Badge variant="outline" className="text-xs">
+                          System
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {ffmpegDownloading ? (
+                        <span className="flex items-center gap-1 text-primary">
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                          Downloading FFmpeg...
+                        </span>
+                      ) : ffmpegSuccess ? (
+                        <span className="flex items-center gap-1 text-emerald-500">
+                          <CheckCircle2 className="w-3 h-3" />
+                          Installed successfully!
+                        </span>
+                      ) : ffmpegError ? (
+                        <span className="flex items-center gap-1 text-destructive">
+                          <AlertCircle className="w-3 h-3" />
+                          {ffmpegError}
+                        </span>
+                      ) : !ffmpegStatus?.installed ? (
+                        <span className="text-amber-500">
+                          Required for merging video + audio (2K, 4K)
+                        </span>
+                      ) : (
+                        'Audio/video processing'
+                      )}
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  {!ffmpegStatus?.installed && !ffmpegLoading && (
+                    <Button
+                      size="sm"
+                      onClick={downloadFfmpeg}
+                      disabled={ffmpegDownloading}
+                      className="h-8"
+                    >
+                      {ffmpegDownloading ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <>
+                          <Download className="w-4 h-4 mr-1.5" />
+                          Install
+                        </>
+                      )}
+                    </Button>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={checkFfmpeg}
+                    disabled={ffmpegLoading || ffmpegDownloading}
+                    className="h-8 w-8"
+                    title="Check FFmpeg"
+                  >
+                    <RefreshCw className={cn(
+                      "w-4 h-4",
+                      ffmpegLoading && "animate-spin"
+                    )} />
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            {/* Info footer */}
+            <div className="px-4 py-2 bg-muted/30 text-xs text-muted-foreground border-t">
+              <a 
+                href="https://ffmpeg.org" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="flex items-center gap-1 hover:text-foreground transition-colors"
+              >
+                <span>ffmpeg.org</span>
                 <ExternalLink className="w-3 h-3" />
               </a>
             </div>

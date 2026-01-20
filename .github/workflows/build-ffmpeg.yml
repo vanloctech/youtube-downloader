@@ -1,0 +1,346 @@
+name: Build FFmpeg
+
+on:
+  workflow_dispatch:
+    inputs:
+      ffmpeg_version:
+        description: 'FFmpeg version tag (e.g., n7.0)'
+        required: false
+        default: 'master'
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  build-macos-arm:
+    runs-on: macos-14  # Apple Silicon runner
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup build environment
+        run: |
+          mkdir -p ${{ github.workspace }}/ffmpeg_build
+          mkdir -p ${{ github.workspace }}/ffmpeg_install
+          
+          echo "BUILD_DIR=${{ github.workspace }}/ffmpeg_build" >> $GITHUB_ENV
+          echo "INSTALL_DIR=${{ github.workspace }}/ffmpeg_install" >> $GITHUB_ENV
+          echo "PATH=${{ github.workspace }}/ffmpeg_install/bin:$PATH" >> $GITHUB_ENV
+          echo "PKG_CONFIG_PATH=${{ github.workspace }}/ffmpeg_install/lib/pkgconfig" >> $GITHUB_ENV
+          echo "LDFLAGS=-L${{ github.workspace }}/ffmpeg_install/lib" >> $GITHUB_ENV
+          echo "CFLAGS=-I${{ github.workspace }}/ffmpeg_install/include" >> $GITHUB_ENV
+
+      - name: Install build tools
+        run: |
+          brew update
+          brew install automake cmake libtool nasm pkg-config yasm
+
+      - name: Build x264
+        run: |
+          cd $BUILD_DIR
+          git clone --depth 1 https://code.videolan.org/videolan/x264.git
+          cd x264
+          ./configure --prefix=$INSTALL_DIR \
+                      --enable-static \
+                      --disable-shared \
+                      --enable-pic
+          make -j$(sysctl -n hw.ncpu)
+          make install
+
+      - name: Build x265
+        run: |
+          cd $BUILD_DIR
+          git clone --depth 1 https://bitbucket.org/multicoreware/x265_git.git x265
+          cd x265/build/darwin
+          cmake -G "Unix Makefiles" \
+                -DCMAKE_INSTALL_PREFIX=$INSTALL_DIR \
+                -DENABLE_SHARED=OFF \
+                -DENABLE_STATIC=ON \
+                -DENABLE_CLI=OFF \
+                ../../source
+          make -j$(sysctl -n hw.ncpu)
+          make install
+
+      - name: Build libvpx
+        run: |
+          cd $BUILD_DIR
+          git clone --depth 1 https://chromium.googlesource.com/webm/libvpx
+          cd libvpx
+          ./configure --prefix=$INSTALL_DIR \
+                      --enable-static \
+                      --disable-shared \
+                      --enable-pic \
+                      --disable-examples \
+                      --disable-unit-tests \
+                      --disable-tools
+          make -j$(sysctl -n hw.ncpu)
+          make install
+
+      - name: Build libaom (AV1)
+        run: |
+          cd $BUILD_DIR
+          git clone --depth 1 https://aomedia.googlesource.com/aom
+          mkdir aom/build_aom && cd aom/build_aom
+          cmake -DCMAKE_INSTALL_PREFIX=$INSTALL_DIR \
+                -DENABLE_SHARED=0 \
+                -DENABLE_STATIC=1 \
+                -DENABLE_TESTS=0 \
+                -DENABLE_EXAMPLES=0 \
+                ..
+          make -j$(sysctl -n hw.ncpu)
+          make install
+
+      - name: Build libopus
+        run: |
+          cd $BUILD_DIR
+          git clone --depth 1 https://github.com/xiph/opus.git
+          cd opus
+          ./autogen.sh
+          ./configure --prefix=$INSTALL_DIR \
+                      --enable-static \
+                      --disable-shared \
+                      --with-pic
+          make -j$(sysctl -n hw.ncpu)
+          make install
+
+      - name: Build FFmpeg
+        run: |
+          cd $BUILD_DIR
+          git clone --depth 1 --branch ${{ inputs.ffmpeg_version || 'master' }} https://git.ffmpeg.org/ffmpeg.git ffmpeg
+          cd ffmpeg
+          ./configure --prefix=$INSTALL_DIR \
+                      --pkg-config-flags="--static" \
+                      --extra-cflags="-I$INSTALL_DIR/include" \
+                      --extra-ldflags="-L$INSTALL_DIR/lib" \
+                      --disable-shared \
+                      --enable-static \
+                      --enable-gpl \
+                      --enable-version3 \
+                      --enable-nonfree \
+                      --enable-pic \
+                      --enable-libx264 \
+                      --enable-libx265 \
+                      --enable-libvpx \
+                      --enable-libaom \
+                      --enable-libopus \
+                      --disable-ffplay \
+                      --disable-doc \
+                      --disable-autodetect
+          make -j$(sysctl -n hw.ncpu)
+          make install
+
+      - name: Get FFmpeg version
+        id: ffmpeg_version
+        run: |
+          VERSION=$($INSTALL_DIR/bin/ffmpeg -version | head -1 | awk '{print $3}')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "FFmpeg version: $VERSION"
+
+      - name: Package binaries
+        run: |
+          cd $INSTALL_DIR/bin
+          # Create minimal package with just ffmpeg and ffprobe
+          tar -czvf ffmpeg-macos-arm64.tar.gz ffmpeg ffprobe
+          
+          # Generate checksum
+          shasum -a 256 ffmpeg-macos-arm64.tar.gz > ffmpeg-macos-arm64.tar.gz.sha256
+          
+          mv ffmpeg-macos-arm64.tar.gz ${{ github.workspace }}/
+          mv ffmpeg-macos-arm64.tar.gz.sha256 ${{ github.workspace }}/
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ffmpeg-macos-arm64
+          path: |
+            ffmpeg-macos-arm64.tar.gz
+            ffmpeg-macos-arm64.tar.gz.sha256
+
+  build-macos-intel:
+    runs-on: macos-13  # Intel runner
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup build environment
+        run: |
+          mkdir -p ${{ github.workspace }}/ffmpeg_build
+          mkdir -p ${{ github.workspace }}/ffmpeg_install
+          
+          echo "BUILD_DIR=${{ github.workspace }}/ffmpeg_build" >> $GITHUB_ENV
+          echo "INSTALL_DIR=${{ github.workspace }}/ffmpeg_install" >> $GITHUB_ENV
+          echo "PATH=${{ github.workspace }}/ffmpeg_install/bin:$PATH" >> $GITHUB_ENV
+          echo "PKG_CONFIG_PATH=${{ github.workspace }}/ffmpeg_install/lib/pkgconfig" >> $GITHUB_ENV
+          echo "LDFLAGS=-L${{ github.workspace }}/ffmpeg_install/lib" >> $GITHUB_ENV
+          echo "CFLAGS=-I${{ github.workspace }}/ffmpeg_install/include" >> $GITHUB_ENV
+
+      - name: Install build tools
+        run: |
+          brew update
+          brew install automake cmake libtool nasm pkg-config yasm
+
+      - name: Build x264
+        run: |
+          cd $BUILD_DIR
+          git clone --depth 1 https://code.videolan.org/videolan/x264.git
+          cd x264
+          ./configure --prefix=$INSTALL_DIR \
+                      --enable-static \
+                      --disable-shared \
+                      --enable-pic
+          make -j$(sysctl -n hw.ncpu)
+          make install
+
+      - name: Build x265
+        run: |
+          cd $BUILD_DIR
+          git clone --depth 1 https://bitbucket.org/multicoreware/x265_git.git x265
+          cd x265/build/darwin
+          cmake -G "Unix Makefiles" \
+                -DCMAKE_INSTALL_PREFIX=$INSTALL_DIR \
+                -DENABLE_SHARED=OFF \
+                -DENABLE_STATIC=ON \
+                -DENABLE_CLI=OFF \
+                ../../source
+          make -j$(sysctl -n hw.ncpu)
+          make install
+
+      - name: Build libvpx
+        run: |
+          cd $BUILD_DIR
+          git clone --depth 1 https://chromium.googlesource.com/webm/libvpx
+          cd libvpx
+          ./configure --prefix=$INSTALL_DIR \
+                      --enable-static \
+                      --disable-shared \
+                      --enable-pic \
+                      --disable-examples \
+                      --disable-unit-tests \
+                      --disable-tools
+          make -j$(sysctl -n hw.ncpu)
+          make install
+
+      - name: Build libaom (AV1)
+        run: |
+          cd $BUILD_DIR
+          git clone --depth 1 https://aomedia.googlesource.com/aom
+          mkdir aom/build_aom && cd aom/build_aom
+          cmake -DCMAKE_INSTALL_PREFIX=$INSTALL_DIR \
+                -DENABLE_SHARED=0 \
+                -DENABLE_STATIC=1 \
+                -DENABLE_TESTS=0 \
+                -DENABLE_EXAMPLES=0 \
+                ..
+          make -j$(sysctl -n hw.ncpu)
+          make install
+
+      - name: Build libopus
+        run: |
+          cd $BUILD_DIR
+          git clone --depth 1 https://github.com/xiph/opus.git
+          cd opus
+          ./autogen.sh
+          ./configure --prefix=$INSTALL_DIR \
+                      --enable-static \
+                      --disable-shared \
+                      --with-pic
+          make -j$(sysctl -n hw.ncpu)
+          make install
+
+      - name: Build FFmpeg
+        run: |
+          cd $BUILD_DIR
+          git clone --depth 1 --branch ${{ inputs.ffmpeg_version || 'master' }} https://git.ffmpeg.org/ffmpeg.git ffmpeg
+          cd ffmpeg
+          ./configure --prefix=$INSTALL_DIR \
+                      --pkg-config-flags="--static" \
+                      --extra-cflags="-I$INSTALL_DIR/include" \
+                      --extra-ldflags="-L$INSTALL_DIR/lib" \
+                      --disable-shared \
+                      --enable-static \
+                      --enable-gpl \
+                      --enable-version3 \
+                      --enable-nonfree \
+                      --enable-pic \
+                      --enable-libx264 \
+                      --enable-libx265 \
+                      --enable-libvpx \
+                      --enable-libaom \
+                      --enable-libopus \
+                      --disable-ffplay \
+                      --disable-doc \
+                      --disable-autodetect
+          make -j$(sysctl -n hw.ncpu)
+          make install
+
+      - name: Package binaries
+        run: |
+          cd $INSTALL_DIR/bin
+          tar -czvf ffmpeg-macos-x64.tar.gz ffmpeg ffprobe
+          shasum -a 256 ffmpeg-macos-x64.tar.gz > ffmpeg-macos-x64.tar.gz.sha256
+          mv ffmpeg-macos-x64.tar.gz ${{ github.workspace }}/
+          mv ffmpeg-macos-x64.tar.gz.sha256 ${{ github.workspace }}/
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ffmpeg-macos-x64
+          path: |
+            ffmpeg-macos-x64.tar.gz
+            ffmpeg-macos-x64.tar.gz.sha256
+
+  release:
+    needs: [build-macos-arm, build-macos-intel]
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: List artifacts
+        run: ls -la artifacts/
+
+      - name: Get current date
+        id: date
+        run: echo "date=$(date +'%Y.%m.%d')" >> $GITHUB_OUTPUT
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: FFmpeg ${{ steps.date.outputs.date }}
+          tag_name: ffmpeg-${{ steps.date.outputs.date }}
+          draft: false
+          prerelease: false
+          body: |
+            # FFmpeg Static Builds for Youwee
+            
+            Self-hosted FFmpeg static binaries for macOS.
+            
+            ## Downloads
+            
+            | Platform | File |
+            |----------|------|
+            | macOS Apple Silicon (M1/M2/M3/M4) | `ffmpeg-macos-arm64.tar.gz` |
+            | macOS Intel | `ffmpeg-macos-x64.tar.gz` |
+            
+            ## Included Codecs
+            - x264 (H.264)
+            - x265 (HEVC)
+            - libvpx (VP8/VP9)
+            - libaom (AV1)
+            - libopus (Opus audio)
+            
+            ## Usage
+            These binaries are automatically downloaded by Youwee when needed.
+            
+            ## Verify Downloads
+            Each file has a corresponding `.sha256` checksum file.
+          files: |
+            artifacts/*.tar.gz
+            artifacts/*.sha256
