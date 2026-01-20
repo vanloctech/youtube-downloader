@@ -401,7 +401,7 @@ export function SettingsPanel({
 
               {/* Audio Bitrate */}
               <div className="space-y-1.5">
-                <Label className="text-[11px] text-muted-foreground">Audio Bitrate</Label>
+                <Label className="text-[11px] text-muted-foreground">Audio Quality</Label>
                 <Select
                   value={settings.audioBitrate}
                   onValueChange={onAudioBitrateChange}
@@ -411,11 +411,8 @@ export function SettingsPanel({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="auto" className="text-xs">Auto</SelectItem>
-                    <SelectItem value="320" className="text-xs">320k</SelectItem>
-                    <SelectItem value="256" className="text-xs">256k</SelectItem>
-                    <SelectItem value="192" className="text-xs">192k</SelectItem>
-                    <SelectItem value="128" className="text-xs">128k</SelectItem>
+                    <SelectItem value="auto" className="text-xs">Best (~160k)</SelectItem>
+                    <SelectItem value="128" className="text-xs">Standard (128k)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

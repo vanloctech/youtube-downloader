@@ -1,7 +1,7 @@
 export type Quality = 'best' | '8k' | '4k' | '2k' | '1080' | '720' | '480' | '360' | 'audio';
 export type Format = 'mp4' | 'mkv' | 'webm' | 'mp3' | 'm4a' | 'opus';
 export type VideoCodec = 'h264' | 'vp9' | 'av1' | 'auto';
-export type AudioBitrate = 'auto' | '128' | '192' | '256' | '320';
+export type AudioBitrate = 'auto' | '128';
 export type SubtitleMode = 'off' | 'auto' | 'manual';
 export type SubtitleFormat = 'srt' | 'vtt' | 'ass';
 

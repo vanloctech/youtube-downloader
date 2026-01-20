@@ -618,30 +618,17 @@ async fn download_video(
             _ => args.push("mp3".to_string()), // Default to mp3 for audio
         }
         args.push("--audio-quality".to_string());
-        // Set audio bitrate
+        // Set audio quality - YouTube max is ~160kbps
         match audio_bitrate.as_str() {
-            "320" => args.push("320K".to_string()),
-            "256" => args.push("256K".to_string()),
-            "192" => args.push("192K".to_string()),
             "128" => args.push("128K".to_string()),
-            _ => args.push("0".to_string()), // "auto" = best quality
+            _ => args.push("0".to_string()), // "auto" = best quality (~160k)
         }
     } else {
         // Video formats - set merge output format
         args.push("--merge-output-format".to_string());
         args.push(format.clone());
-        
-        // For video downloads with specific audio bitrate:
-        // We need to re-encode the audio track after merging
-        // Using --postprocessor-args with proper FFmpeg flags
-        if audio_bitrate != "auto" {
-            // Use FFmpeg to re-encode audio to specified bitrate
-            // -c:v copy = copy video stream without re-encoding
-            // -c:a aac = encode audio to AAC
-            // -b:a = target audio bitrate
-            args.push("--postprocessor-args".to_string());
-            args.push(format!("Merger+ffmpeg:-c:v copy -c:a aac -b:a {}k", audio_bitrate));
-        }
+        // Audio quality for video is always best available from YouTube
+        // No re-encoding needed since we removed upscaling options
     }
     
     args.push(url);
