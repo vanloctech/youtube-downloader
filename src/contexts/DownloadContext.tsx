@@ -175,6 +175,12 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
                       progress.status === 'error' ? 'error' : 'downloading',
               playlistIndex: progress.playlist_index,
               playlistTotal: progress.playlist_count,
+              // Store completed info when finished
+              ...(progress.status === 'finished' ? {
+                completedFilesize: progress.filesize,
+                completedResolution: progress.resolution,
+                completedFormat: progress.format_ext,
+              } : {}),
             }
           : item
       ));

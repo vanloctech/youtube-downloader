@@ -19,6 +19,10 @@ struct DownloadProgress {
     title: Option<String>,
     playlist_index: Option<u32>,
     playlist_count: Option<u32>,
+    // Additional info for completed downloads
+    filesize: Option<u64>,
+    resolution: Option<String>,
+    format_ext: Option<String>,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -649,6 +653,8 @@ async fn download_video(
             let mut current_title: Option<String> = None;
             let mut current_index: Option<u32> = None;
             let mut total_count: Option<u32> = None;
+            let mut last_filesize: Option<u64> = None;
+            let mut detected_resolution: Option<String> = None;
             
             while let Some(event) = rx.recv().await {
                 // Check cancel flag first
@@ -683,6 +689,37 @@ async fn download_video(
                             }
                         }
                         
+                        // Parse filesize from progress line: "[download] 100% of 50.5MiB" or "50.5MiB"
+                        if line.contains("% of") || line.contains("MiB") || line.contains("GiB") || line.contains("KiB") {
+                            let size_re = regex::Regex::new(r"(\d+(?:\.\d+)?)\s*(GiB|MiB|KiB)").ok();
+                            if let Some(re) = size_re {
+                                if let Some(caps) = re.captures(&line) {
+                                    if let (Some(num), Some(unit)) = (caps.get(1), caps.get(2)) {
+                                        if let Ok(size) = num.as_str().parse::<f64>() {
+                                            last_filesize = Some(match unit.as_str() {
+                                                "GiB" => (size * 1024.0 * 1024.0 * 1024.0) as u64,
+                                                "MiB" => (size * 1024.0 * 1024.0) as u64,
+                                                "KiB" => (size * 1024.0) as u64,
+                                                _ => size as u64,
+                                            });
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        
+                        // Parse resolution from format selection: "1920x1080" or "1080p"
+                        if line.contains("x") && (line.contains("Downloading") || line.contains("format")) {
+                            let res_re = regex::Regex::new(r"(\d{3,4})x(\d{3,4})").ok();
+                            if let Some(re) = res_re {
+                                if let Some(caps) = re.captures(&line) {
+                                    if let (Some(w), Some(h)) = (caps.get(1), caps.get(2)) {
+                                        detected_resolution = Some(format!("{}x{}", w.as_str(), h.as_str()));
+                                    }
+                                }
+                            }
+                        }
+                        
                         if let Some((percent, speed, eta, pi, pc)) = parse_progress(&line) {
                             if pi.is_some() { current_index = pi; }
                             if pc.is_some() { total_count = pc; }
@@ -696,6 +733,9 @@ async fn download_video(
                                 title: current_title.clone(),
                                 playlist_index: current_index,
                                 playlist_count: total_count,
+                                filesize: None,
+                                resolution: None,
+                                format_ext: None,
                             };
                             app.emit("download-progress", progress).ok();
                         }
@@ -719,6 +759,9 @@ async fn download_video(
                                 title: current_title.clone(),
                                 playlist_index: current_index,
                                 playlist_count: total_count,
+                                filesize: last_filesize,
+                                resolution: detected_resolution.clone(),
+                                format_ext: Some(format.clone()),
                             };
                             app.emit("download-progress", progress).ok();
                             return Ok(());
@@ -756,6 +799,8 @@ async fn handle_tokio_download(
     let mut current_title: Option<String> = None;
     let mut current_index: Option<u32> = None;
     let mut total_count: Option<u32> = None;
+    let mut last_filesize: Option<u64> = None;
+    let mut detected_resolution: Option<String> = None;
     
     while let Ok(Some(line)) = reader.next_line().await {
         if CANCEL_FLAG.load(Ordering::SeqCst) {
@@ -785,6 +830,37 @@ async fn handle_tokio_download(
             }
         }
         
+        // Parse filesize from progress line
+        if line.contains("% of") || line.contains("MiB") || line.contains("GiB") || line.contains("KiB") {
+            let size_re = regex::Regex::new(r"(\d+(?:\.\d+)?)\s*(GiB|MiB|KiB)").ok();
+            if let Some(re) = size_re {
+                if let Some(caps) = re.captures(&line) {
+                    if let (Some(num), Some(unit)) = (caps.get(1), caps.get(2)) {
+                        if let Ok(size) = num.as_str().parse::<f64>() {
+                            last_filesize = Some(match unit.as_str() {
+                                "GiB" => (size * 1024.0 * 1024.0 * 1024.0) as u64,
+                                "MiB" => (size * 1024.0 * 1024.0) as u64,
+                                "KiB" => (size * 1024.0) as u64,
+                                _ => size as u64,
+                            });
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Parse resolution from format selection
+        if line.contains("x") && (line.contains("Downloading") || line.contains("format")) {
+            let res_re = regex::Regex::new(r"(\d{3,4})x(\d{3,4})").ok();
+            if let Some(re) = res_re {
+                if let Some(caps) = re.captures(&line) {
+                    if let (Some(w), Some(h)) = (caps.get(1), caps.get(2)) {
+                        detected_resolution = Some(format!("{}x{}", w.as_str(), h.as_str()));
+                    }
+                }
+            }
+        }
+        
         if let Some((percent, speed, eta, pi, pc)) = parse_progress(&line) {
             if pi.is_some() { current_index = pi; }
             if pc.is_some() { total_count = pc; }
@@ -798,6 +874,9 @@ async fn handle_tokio_download(
                 title: current_title.clone(),
                 playlist_index: current_index,
                 playlist_count: total_count,
+                filesize: None,
+                resolution: None,
+                format_ext: None,
             };
             app.emit("download-progress", progress).ok();
         }
@@ -819,6 +898,9 @@ async fn handle_tokio_download(
             title: current_title,
             playlist_index: current_index,
             playlist_count: total_count,
+            filesize: last_filesize,
+            resolution: detected_resolution,
+            format_ext: None,
         };
         app.emit("download-progress", progress).ok();
         Ok(())

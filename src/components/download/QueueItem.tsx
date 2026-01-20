@@ -6,9 +6,37 @@ import {
   X,
   ListVideo,
   Play,
+  HardDrive,
+  MonitorPlay,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { DownloadItem } from '@/lib/types';
+
+// Helper to format file size
+function formatFileSize(bytes: number): string {
+  if (bytes >= 1024 * 1024 * 1024) {
+    return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
+  } else if (bytes >= 1024 * 1024) {
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  } else if (bytes >= 1024) {
+    return `${(bytes / 1024).toFixed(0)} KB`;
+  }
+  return `${bytes} B`;
+}
+
+// Helper to format resolution to friendly name
+function formatResolution(resolution: string): string {
+  const height = resolution.split('x')[1];
+  if (!height) return resolution;
+  const h = parseInt(height);
+  if (h >= 2160) return '4K';
+  if (h >= 1440) return '2K';
+  if (h >= 1080) return '1080p';
+  if (h >= 720) return '720p';
+  if (h >= 480) return '480p';
+  if (h >= 360) return '360p';
+  return resolution;
+}
 
 interface QueueItemProps {
   item: DownloadItem;
@@ -150,7 +178,7 @@ export function QueueItem({
         </p>
         
         {/* Status Row */}
-        <div className="flex items-center gap-2 mt-1.5">
+        <div className="flex items-center gap-2 mt-1.5 flex-wrap">
           {/* Status Badge */}
           <span className={cn(
             "inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium",
@@ -170,6 +198,29 @@ export function QueueItem({
               {isError && 'Failed'}
             </span>
           </span>
+          
+          {/* Completed Info: Resolution, Size, Format */}
+          {isCompleted && (
+            <>
+              {item.completedResolution && (
+                <span className="inline-flex items-center gap-1 text-[11px] px-1.5 py-0.5 rounded bg-muted/50 text-muted-foreground">
+                  <MonitorPlay className="w-3 h-3" />
+                  {formatResolution(item.completedResolution)}
+                </span>
+              )}
+              {item.completedFilesize && (
+                <span className="inline-flex items-center gap-1 text-[11px] px-1.5 py-0.5 rounded bg-muted/50 text-muted-foreground">
+                  <HardDrive className="w-3 h-3" />
+                  {formatFileSize(item.completedFilesize)}
+                </span>
+              )}
+              {item.completedFormat && (
+                <span className="text-[11px] px-1.5 py-0.5 rounded bg-muted/50 text-muted-foreground uppercase">
+                  {item.completedFormat}
+                </span>
+              )}
+            </>
+          )}
           
           {/* Error Message */}
           {isError && item.error && (
