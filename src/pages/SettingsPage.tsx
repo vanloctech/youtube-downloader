@@ -73,9 +73,12 @@ export function SettingsPage() {
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       {/* Header */}
-      <header className="flex-shrink-0 flex items-center h-14 px-6 border-b bg-card/30 backdrop-blur-xl">
+      <header className="flex-shrink-0 flex items-center h-14 px-6">
         <h1 className="text-lg font-semibold">Settings</h1>
       </header>
+
+      {/* Subtle divider */}
+      <div className="mx-6 h-px bg-gradient-to-r from-transparent via-border/50 to-transparent" />
 
       {/* Content */}
       <div className="flex-1 overflow-auto p-4 sm:p-6 space-y-6">
@@ -88,17 +91,17 @@ export function SettingsPage() {
             </p>
           </div>
 
-          <div className="rounded-xl border bg-card/50 backdrop-blur-sm p-4 space-y-5">
+          <div className="rounded-2xl border border-white/10 dark:border-white/5 bg-white/5 dark:bg-white/[0.02] backdrop-blur-sm p-4 space-y-5">
             {/* Mode Toggle - Compact */}
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium">Mode</span>
-              <div className="flex items-center gap-1 p-1 rounded-lg bg-muted/50">
+              <div className="flex items-center gap-1 p-1 rounded-lg bg-black/5 dark:bg-white/5">
                 <button
                   onClick={() => setMode('light')}
                   className={cn(
                     'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all',
                     mode === 'light'
-                      ? 'bg-background text-foreground shadow-sm'
+                      ? 'bg-white dark:bg-white/10 text-foreground shadow-sm'
                       : 'text-muted-foreground hover:text-foreground'
                   )}
                   title="Light mode"
@@ -111,7 +114,7 @@ export function SettingsPage() {
                   className={cn(
                     'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all',
                     mode === 'dark'
-                      ? 'bg-background text-foreground shadow-sm'
+                      ? 'bg-white dark:bg-white/10 text-foreground shadow-sm'
                       : 'text-muted-foreground hover:text-foreground'
                   )}
                   title="Dark mode"
@@ -123,7 +126,7 @@ export function SettingsPage() {
             </div>
 
             {/* Divider */}
-            <div className="border-t" />
+            <div className="h-px bg-gradient-to-r from-transparent via-border/30 to-transparent" />
 
             {/* Theme Colors - Compact Grid */}
             <div className="space-y-3">
@@ -134,10 +137,10 @@ export function SettingsPage() {
                     key={t.name}
                     onClick={() => setTheme(t.name)}
                     className={cn(
-                      'group relative flex items-center gap-2 px-3 py-2 rounded-lg border transition-all',
+                      'group relative flex items-center gap-2 px-3 py-2 rounded-xl transition-all',
                       theme === t.name
-                        ? 'border-primary bg-primary/5 ring-1 ring-primary/20'
-                        : 'border-transparent bg-muted/30 hover:bg-muted/50'
+                        ? 'bg-primary/10 ring-1 ring-primary/30'
+                        : 'bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10'
                     )}
                     title={`${t.label} theme`}
                   >
@@ -168,18 +171,18 @@ export function SettingsPage() {
             </p>
           </div>
 
-          <div className="rounded-xl border bg-card/50 backdrop-blur-sm overflow-hidden">
+          <div className="rounded-2xl border border-white/10 dark:border-white/5 bg-white/5 dark:bg-white/[0.02] backdrop-blur-sm overflow-hidden">
             {/* App update row */}
             <div className="p-4">
               <div className="flex items-start justify-between gap-4">
                 <div className="flex items-start gap-3 min-w-0">
-                  <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center flex-shrink-0">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center flex-shrink-0 shadow-lg shadow-primary/20">
                     <Sparkles className="w-5 h-5 text-white" />
                   </div>
                   <div className="min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-medium">Youwee</span>
-                      <Badge variant="secondary" className="text-xs font-mono">
+                      <Badge variant="secondary" className="text-xs font-mono bg-black/5 dark:bg-white/10">
                         v0.2.1
                       </Badge>
                     </div>
@@ -215,7 +218,7 @@ export function SettingsPage() {
                     <Button
                       size="sm"
                       onClick={updater.downloadAndInstall}
-                      className="h-8"
+                      className="h-8 rounded-lg"
                     >
                       <Download className="w-4 h-4 mr-1.5" />
                       Update
@@ -226,7 +229,7 @@ export function SettingsPage() {
                     size="icon"
                     onClick={updater.checkForUpdate}
                     disabled={isAppChecking}
-                    className="h-8 w-8"
+                    className="h-8 w-8 rounded-lg"
                     title="Check for updates"
                   >
                     <RefreshCw className={cn(
@@ -239,7 +242,7 @@ export function SettingsPage() {
             </div>
 
             {/* Auto update toggle */}
-            <div className="px-4 py-3 bg-muted/30 border-t flex items-center justify-between">
+            <div className="px-4 py-3 bg-black/5 dark:bg-white/[0.02] flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Label htmlFor="auto-update" className="text-xs font-medium cursor-pointer">
                   Auto-check for updates on startup
@@ -263,223 +266,225 @@ export function SettingsPage() {
             </p>
           </div>
 
-          <div className="rounded-xl border bg-card/50 backdrop-blur-sm overflow-hidden">
-            {/* yt-dlp row */}
-            <div className="p-4">
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex items-start gap-3 min-w-0">
-                  <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-red-500 to-orange-500 flex items-center justify-center flex-shrink-0">
-                    <Terminal className="w-5 h-5 text-white" />
-                  </div>
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-medium">yt-dlp</span>
-                      {isLoading ? (
-                        <Badge variant="secondary" className="text-xs">
-                          <Loader2 className="w-3 h-3 mr-1 animate-spin" />
-                          Loading...
-                        </Badge>
-                      ) : ytdlpInfo ? (
-                        <Badge variant="secondary" className="text-xs font-mono">
-                          {ytdlpInfo.version}
-                        </Badge>
-                      ) : (
-                        <Badge variant="destructive" className="text-xs">
-                          Not found
-                        </Badge>
-                      )}
-                      {ytdlpInfo?.is_bundled && (
-                        <Badge variant="outline" className="text-xs">
-                          Bundled
-                        </Badge>
-                      )}
+          <div className="space-y-3">
+            {/* yt-dlp card */}
+            <div className="rounded-2xl border border-white/10 dark:border-white/5 bg-white/5 dark:bg-white/[0.02] backdrop-blur-sm overflow-hidden">
+              <div className="p-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex items-start gap-3 min-w-0">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-red-500 to-orange-500 flex items-center justify-center flex-shrink-0 shadow-lg shadow-red-500/20">
+                      <Terminal className="w-5 h-5 text-white" />
                     </div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {isUpdating ? (
-                        <span className="flex items-center gap-1 text-primary">
-                          <Loader2 className="w-3 h-3 animate-spin" />
-                          Downloading update...
-                        </span>
-                      ) : updateSuccess ? (
-                        <span className="flex items-center gap-1 text-emerald-500">
-                          <CheckCircle2 className="w-3 h-3" />
-                          Updated successfully!
-                        </span>
-                      ) : error ? (
-                        <span className="flex items-center gap-1 text-destructive">
-                          <AlertCircle className="w-3 h-3" />
-                          {error}
-                        </span>
-                      ) : isUpdateAvailable ? (
-                        <span className="text-primary">
-                          Update available: {latestVersion}
-                        </span>
-                      ) : latestVersion ? (
-                        <span className="flex items-center gap-1 text-emerald-500">
-                          <CheckCircle2 className="w-3 h-3" />
-                          Up to date
-                        </span>
-                      ) : (
-                        'Video download engine'
-                      )}
-                    </p>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-medium">yt-dlp</span>
+                        {isLoading ? (
+                          <Badge variant="secondary" className="text-xs bg-black/5 dark:bg-white/10">
+                            <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                            Loading...
+                          </Badge>
+                        ) : ytdlpInfo ? (
+                          <Badge variant="secondary" className="text-xs font-mono bg-black/5 dark:bg-white/10">
+                            {ytdlpInfo.version}
+                          </Badge>
+                        ) : (
+                          <Badge variant="destructive" className="text-xs">
+                            Not found
+                          </Badge>
+                        )}
+                        {ytdlpInfo?.is_bundled && (
+                          <Badge variant="outline" className="text-xs">
+                            Bundled
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {isUpdating ? (
+                          <span className="flex items-center gap-1 text-primary">
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                            Downloading update...
+                          </span>
+                        ) : updateSuccess ? (
+                          <span className="flex items-center gap-1 text-emerald-500">
+                            <CheckCircle2 className="w-3 h-3" />
+                            Updated successfully!
+                          </span>
+                        ) : error ? (
+                          <span className="flex items-center gap-1 text-destructive">
+                            <AlertCircle className="w-3 h-3" />
+                            {error}
+                          </span>
+                        ) : isUpdateAvailable ? (
+                          <span className="text-primary">
+                            Update available: {latestVersion}
+                          </span>
+                        ) : latestVersion ? (
+                          <span className="flex items-center gap-1 text-emerald-500">
+                            <CheckCircle2 className="w-3 h-3" />
+                            Up to date
+                          </span>
+                        ) : (
+                          'Video download engine'
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    {isUpdateAvailable && (
+                      <Button
+                        size="sm"
+                        onClick={updateYtdlp}
+                        disabled={isUpdating}
+                        className="h-8 rounded-lg"
+                      >
+                        {isUpdating ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <>
+                            <Download className="w-4 h-4 mr-1.5" />
+                            Update
+                          </>
+                        )}
+                      </Button>
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={checkForUpdate}
+                      disabled={isChecking || isUpdating || isLoading}
+                      className="h-8 w-8 rounded-lg"
+                      title="Check for updates"
+                    >
+                      <RefreshCw className={cn(
+                        "w-4 h-4",
+                        isChecking && "animate-spin"
+                      )} />
+                    </Button>
                   </div>
                 </div>
-                
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  {isUpdateAvailable && (
-                    <Button
-                      size="sm"
-                      onClick={updateYtdlp}
-                      disabled={isUpdating}
-                      className="h-8"
-                    >
-                      {isUpdating ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <>
-                          <Download className="w-4 h-4 mr-1.5" />
-                          Update
-                        </>
-                      )}
-                    </Button>
-                  )}
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={checkForUpdate}
-                    disabled={isChecking || isUpdating || isLoading}
-                    className="h-8 w-8"
-                    title="Check for updates"
-                  >
-                    <RefreshCw className={cn(
-                      "w-4 h-4",
-                      isChecking && "animate-spin"
-                    )} />
-                  </Button>
-                </div>
+              </div>
+
+              {/* Info footer */}
+              <div className="px-4 py-2 bg-black/5 dark:bg-white/[0.02] text-xs text-muted-foreground">
+                <a 
+                  href="https://github.com/yt-dlp/yt-dlp" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 hover:text-foreground transition-colors"
+                >
+                  <Github className="w-3 h-3" />
+                  <span>yt-dlp/yt-dlp</span>
+                  <ExternalLink className="w-3 h-3" />
+                </a>
               </div>
             </div>
 
-            {/* Info footer */}
-            <div className="px-4 py-2 bg-muted/30 text-xs text-muted-foreground border-t">
-              <a 
-                href="https://github.com/yt-dlp/yt-dlp" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="flex items-center gap-1 hover:text-foreground transition-colors"
-              >
-                <Github className="w-3 h-3" />
-                <span>yt-dlp/yt-dlp</span>
-                <ExternalLink className="w-3 h-3" />
-              </a>
-            </div>
-          </div>
-
-          {/* FFmpeg row */}
-          <div className="rounded-xl border bg-card/50 backdrop-blur-sm overflow-hidden">
-            <div className="p-4">
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex items-start gap-3 min-w-0">
-                  <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center flex-shrink-0">
-                    <Film className="w-5 h-5 text-white" />
-                  </div>
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-medium">FFmpeg</span>
-                      {ffmpegLoading ? (
-                        <Badge variant="secondary" className="text-xs">
-                          <Loader2 className="w-3 h-3 mr-1 animate-spin" />
-                          Checking...
-                        </Badge>
-                      ) : ffmpegStatus?.installed ? (
-                        <Badge variant="secondary" className="text-xs font-mono">
-                          {ffmpegStatus.version || 'Installed'}
-                        </Badge>
-                      ) : (
-                        <Badge variant="destructive" className="text-xs">
-                          Not found
-                        </Badge>
-                      )}
-                      {ffmpegStatus?.is_system && (
-                        <Badge variant="outline" className="text-xs">
-                          System
-                        </Badge>
-                      )}
+            {/* FFmpeg card */}
+            <div className="rounded-2xl border border-white/10 dark:border-white/5 bg-white/5 dark:bg-white/[0.02] backdrop-blur-sm overflow-hidden">
+              <div className="p-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex items-start gap-3 min-w-0">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center flex-shrink-0 shadow-lg shadow-green-500/20">
+                      <Film className="w-5 h-5 text-white" />
                     </div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {ffmpegDownloading ? (
-                        <span className="flex items-center gap-1 text-primary">
-                          <Loader2 className="w-3 h-3 animate-spin" />
-                          Downloading FFmpeg...
-                        </span>
-                      ) : ffmpegSuccess ? (
-                        <span className="flex items-center gap-1 text-emerald-500">
-                          <CheckCircle2 className="w-3 h-3" />
-                          Installed successfully!
-                        </span>
-                      ) : ffmpegError ? (
-                        <span className="flex items-center gap-1 text-destructive">
-                          <AlertCircle className="w-3 h-3" />
-                          {ffmpegError}
-                        </span>
-                      ) : !ffmpegStatus?.installed ? (
-                        <span className="text-amber-500">
-                          Required for merging video + audio (2K, 4K)
-                        </span>
-                      ) : (
-                        'Audio/video processing'
-                      )}
-                    </p>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-medium">FFmpeg</span>
+                        {ffmpegLoading ? (
+                          <Badge variant="secondary" className="text-xs bg-black/5 dark:bg-white/10">
+                            <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                            Checking...
+                          </Badge>
+                        ) : ffmpegStatus?.installed ? (
+                          <Badge variant="secondary" className="text-xs font-mono bg-black/5 dark:bg-white/10">
+                            {ffmpegStatus.version || 'Installed'}
+                          </Badge>
+                        ) : (
+                          <Badge variant="destructive" className="text-xs">
+                            Not found
+                          </Badge>
+                        )}
+                        {ffmpegStatus?.is_system && (
+                          <Badge variant="outline" className="text-xs">
+                            System
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {ffmpegDownloading ? (
+                          <span className="flex items-center gap-1 text-primary">
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                            Downloading FFmpeg...
+                          </span>
+                        ) : ffmpegSuccess ? (
+                          <span className="flex items-center gap-1 text-emerald-500">
+                            <CheckCircle2 className="w-3 h-3" />
+                            Installed successfully!
+                          </span>
+                        ) : ffmpegError ? (
+                          <span className="flex items-center gap-1 text-destructive">
+                            <AlertCircle className="w-3 h-3" />
+                            {ffmpegError}
+                          </span>
+                        ) : !ffmpegStatus?.installed ? (
+                          <span className="text-amber-500">
+                            Required for merging video + audio (2K, 4K, 8K)
+                          </span>
+                        ) : (
+                          'Audio/video processing'
+                        )}
+                      </p>
+                    </div>
                   </div>
-                </div>
-                
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  {!ffmpegStatus?.installed && !ffmpegLoading && (
+                  
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    {!ffmpegStatus?.installed && !ffmpegLoading && (
+                      <Button
+                        size="sm"
+                        onClick={downloadFfmpeg}
+                        disabled={ffmpegDownloading}
+                        className="h-8 rounded-lg"
+                      >
+                        {ffmpegDownloading ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <>
+                            <Download className="w-4 h-4 mr-1.5" />
+                            Install
+                          </>
+                        )}
+                      </Button>
+                    )}
                     <Button
-                      size="sm"
-                      onClick={downloadFfmpeg}
-                      disabled={ffmpegDownloading}
-                      className="h-8"
+                      variant="ghost"
+                      size="icon"
+                      onClick={checkFfmpeg}
+                      disabled={ffmpegLoading || ffmpegDownloading}
+                      className="h-8 w-8 rounded-lg"
+                      title="Check FFmpeg"
                     >
-                      {ffmpegDownloading ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <>
-                          <Download className="w-4 h-4 mr-1.5" />
-                          Install
-                        </>
-                      )}
+                      <RefreshCw className={cn(
+                        "w-4 h-4",
+                        ffmpegLoading && "animate-spin"
+                      )} />
                     </Button>
-                  )}
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={checkFfmpeg}
-                    disabled={ffmpegLoading || ffmpegDownloading}
-                    className="h-8 w-8"
-                    title="Check FFmpeg"
-                  >
-                    <RefreshCw className={cn(
-                      "w-4 h-4",
-                      ffmpegLoading && "animate-spin"
-                    )} />
-                  </Button>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            {/* Info footer */}
-            <div className="px-4 py-2 bg-muted/30 text-xs text-muted-foreground border-t">
-              <a 
-                href="https://ffmpeg.org" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="flex items-center gap-1 hover:text-foreground transition-colors"
-              >
-                <span>ffmpeg.org</span>
-                <ExternalLink className="w-3 h-3" />
-              </a>
+              {/* Info footer */}
+              <div className="px-4 py-2 bg-black/5 dark:bg-white/[0.02] text-xs text-muted-foreground">
+                <a 
+                  href="https://ffmpeg.org" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 hover:text-foreground transition-colors"
+                >
+                  <span>ffmpeg.org</span>
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+              </div>
             </div>
           </div>
         </div>
@@ -493,10 +498,10 @@ export function SettingsPage() {
             </p>
           </div>
 
-          <div className="rounded-xl border bg-card/50 backdrop-blur-sm overflow-hidden">
+          <div className="rounded-2xl border border-white/10 dark:border-white/5 bg-white/5 dark:bg-white/[0.02] backdrop-blur-sm overflow-hidden">
             {/* App Info Header */}
-            <div className="p-5 flex items-center gap-4 border-b bg-gradient-to-r from-primary/5 to-transparent">
-              <div className="w-16 h-16 rounded-2xl overflow-hidden shadow-lg ring-1 ring-border">
+            <div className="p-5 flex items-center gap-4">
+              <div className="w-16 h-16 rounded-2xl overflow-hidden shadow-lg ring-2 ring-white/10">
                 <img 
                   src="/logo-128.png" 
                   alt="Youwee" 
@@ -512,16 +517,22 @@ export function SettingsPage() {
               </div>
             </div>
 
+            {/* Divider */}
+            <div className="mx-4 h-px bg-gradient-to-r from-transparent via-border/30 to-transparent" />
+
             {/* Description */}
-            <div className="p-4 border-b">
+            <div className="p-4">
               <p className="text-sm text-muted-foreground leading-relaxed">
                 A beautiful, fast, and modern YouTube video downloader built with Tauri and React. 
-                Download videos in various qualities (up to 4K) and formats with H.264 codec support for maximum compatibility.
+                Download videos in various qualities (up to 8K) and formats with VP9 codec support for maximum quality.
               </p>
             </div>
 
+            {/* Divider */}
+            <div className="mx-4 h-px bg-gradient-to-r from-transparent via-border/30 to-transparent" />
+
             {/* Features */}
-            <div className="p-4 border-b">
+            <div className="p-4">
               <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Features</h4>
               <div className="grid grid-cols-2 gap-2 text-xs">
                 <div className="flex items-center gap-2">
@@ -534,11 +545,11 @@ export function SettingsPage() {
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="w-1.5 h-1.5 rounded-full bg-primary" />
-                  <span>4K/2K/1080p quality</span>
+                  <span>8K/4K/2K quality</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="w-1.5 h-1.5 rounded-full bg-primary" />
-                  <span>H.264 codec</span>
+                  <span>VP9 codec</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="w-1.5 h-1.5 rounded-full bg-primary" />
@@ -559,12 +570,15 @@ export function SettingsPage() {
               </div>
             </div>
 
+            {/* Divider */}
+            <div className="mx-4 h-px bg-gradient-to-r from-transparent via-border/30 to-transparent" />
+
             {/* Tech Stack & Links */}
             <div className="p-4 flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <span className="px-2 py-1 rounded bg-muted/50">Tauri 2.0</span>
-                <span className="px-2 py-1 rounded bg-muted/50">React 19</span>
-                <span className="px-2 py-1 rounded bg-muted/50">yt-dlp</span>
+                <span className="px-2 py-1 rounded-lg bg-black/5 dark:bg-white/5">Tauri 2.0</span>
+                <span className="px-2 py-1 rounded-lg bg-black/5 dark:bg-white/5">React 19</span>
+                <span className="px-2 py-1 rounded-lg bg-black/5 dark:bg-white/5">yt-dlp</span>
               </div>
               <div className="flex items-center gap-2">
                 <a 
@@ -581,7 +595,7 @@ export function SettingsPage() {
             </div>
 
             {/* License */}
-            <div className="px-4 py-3 bg-muted/30 text-xs text-muted-foreground text-center">
+            <div className="px-4 py-3 bg-black/5 dark:bg-white/[0.02] text-xs text-muted-foreground text-center">
               Open source under MIT License • Made with ❤️ by VietNam
             </div>
           </div>

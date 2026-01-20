@@ -41,15 +41,18 @@ export function DownloadPage() {
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       {/* Header */}
-      <header className="flex-shrink-0 flex items-center justify-between h-12 sm:h-14 px-4 sm:px-6 border-b bg-card/30 backdrop-blur-xl">
+      <header className="flex-shrink-0 flex items-center justify-between h-12 sm:h-14 px-4 sm:px-6">
         <h1 className="text-base sm:text-lg font-semibold">Download</h1>
         <ThemePicker />
       </header>
 
+      {/* Subtle divider */}
+      <div className="mx-4 sm:mx-6 h-px bg-gradient-to-r from-transparent via-border/50 to-transparent" />
+
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Top Section: URL Input + Settings */}
-        <div className="flex-shrink-0 p-4 sm:p-6 space-y-3 border-b bg-card/20">
+        <div className="flex-shrink-0 p-4 sm:p-6 space-y-3">
           {/* URL Input */}
           <UrlInput
             disabled={isDownloading}
@@ -74,8 +77,11 @@ export function DownloadPage() {
           />
         </div>
 
+        {/* Subtle divider */}
+        <div className="mx-4 sm:mx-6 h-px bg-gradient-to-r from-transparent via-border/40 to-transparent" />
+
         {/* Queue Section */}
-        <div className="flex-1 flex flex-col overflow-hidden px-4 sm:px-6 pt-2">
+        <div className="flex-1 flex flex-col overflow-hidden px-4 sm:px-6 pt-3">
           <QueueList
             items={items}
             isDownloading={isDownloading}
@@ -89,9 +95,12 @@ export function DownloadPage() {
 
       {/* Floating Action Bar */}
       <footer className={cn(
-        "flex-shrink-0 border-t bg-card/50 backdrop-blur-xl transition-all duration-300",
+        "flex-shrink-0 transition-all duration-300",
         hasItems ? "translate-y-0 opacity-100" : "translate-y-full opacity-0 pointer-events-none"
       )}>
+        {/* Subtle top divider */}
+        <div className="mx-4 sm:mx-6 h-px bg-gradient-to-r from-transparent via-border/40 to-transparent" />
+        
         <div className="px-4 sm:px-6 py-3 sm:py-4">
           <div className="flex items-center gap-3">
             {!isDownloading ? (
@@ -132,7 +141,7 @@ export function DownloadPage() {
               size="icon"
               onClick={clearAll}
               disabled={isDownloading || items.length === 0}
-              className="h-11 w-11 rounded-xl flex-shrink-0"
+              className="h-11 w-11 rounded-xl flex-shrink-0 bg-transparent border-border/50 hover:bg-white/10"
               title="Clear all items from queue"
             >
               <Trash2 className="w-5 h-5" />
