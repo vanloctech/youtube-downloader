@@ -128,7 +128,7 @@ export function SettingsPanel({
         <SelectContent>
           {qualityOptions.map((opt) => (
             <SelectItem key={opt.value} value={opt.value} className="text-xs">
-              {opt.shortLabel}
+              {opt.label}
             </SelectItem>
           ))}
         </SelectContent>
