@@ -1265,10 +1265,25 @@ async fn download_video(
                                     Some("other".to_string())
                                 };
                                 
+                                // Generate thumbnail URL for YouTube
+                                let thumbnail = if url.contains("youtube.com") || url.contains("youtu.be") {
+                                    // Extract video ID from URL
+                                    let video_id = if url.contains("v=") {
+                                        url.split("v=").nth(1).and_then(|s| s.split('&').next())
+                                    } else if url.contains("youtu.be/") {
+                                        url.split("youtu.be/").nth(1).and_then(|s| s.split('?').next())
+                                    } else {
+                                        None
+                                    };
+                                    video_id.map(|id| format!("https://i.ytimg.com/vi/{}/mqdefault.jpg", id))
+                                } else {
+                                    None
+                                };
+                                
                                 add_history_internal(
                                     url.clone(),
                                     display_title.clone().unwrap_or_else(|| "Unknown".to_string()),
-                                    None, // thumbnail - not available here
+                                    thumbnail,
                                     filepath.clone(),
                                     reported_filesize,
                                     None, // duration

@@ -1,103 +1,113 @@
+import { cn } from '@/lib/utils';
 import { useHistory } from '@/contexts/HistoryContext';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from '@/components/ui/alert-dialog';
-import { Search, Trash2, RefreshCw } from 'lucide-react';
 import type { HistoryFilter } from '@/lib/types';
+import { Search, Trash2, RefreshCw } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { useState, useCallback } from 'react';
+
+const filterOptions: { value: HistoryFilter; label: string }[] = [
+  { value: 'all', label: 'All' },
+  { value: 'youtube', label: 'YouTube' },
+  { value: 'tiktok', label: 'TikTok' },
+  { value: 'facebook', label: 'Facebook' },
+  { value: 'instagram', label: 'Instagram' },
+  { value: 'twitter', label: 'Twitter' },
+  { value: 'other', label: 'Other' },
+];
 
 export function HistoryToolbar() {
-  const { filter, setFilter, search, setSearch, clearHistory, refreshHistory, totalCount, loading } = useHistory();
+  const {
+    filter,
+    search,
+    loading,
+    totalCount,
+    setFilter,
+    setSearch,
+    refreshHistory,
+    clearHistory,
+  } = useHistory();
+
+  const [clearing, setClearing] = useState(false);
+
+  const handleClear = useCallback(async () => {
+    if (!confirm('Are you sure you want to clear all download history?')) return;
+    setClearing(true);
+    try {
+      await clearHistory();
+    } finally {
+      setClearing(false);
+    }
+  }, [clearHistory]);
 
   return (
-    <div className="flex flex-col sm:flex-row gap-3">
-      {/* Search */}
+    <div className="space-y-3">
+      {/* Search - styled like URL input */}
       <div className="relative flex-1">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
         <Input
-          placeholder="Search history..."
+          type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="pl-9 h-9"
+          placeholder="Search downloads..."
+          className={cn(
+            'pl-10 pr-4 h-11 text-sm',
+            'bg-background/50 border-border/50',
+            'focus:bg-background transition-colors',
+            'placeholder:text-muted-foreground/50'
+          )}
         />
       </div>
 
-      {/* Filter */}
-      <Select value={filter} onValueChange={(v) => setFilter(v as HistoryFilter)}>
-        <SelectTrigger className="w-full sm:w-[140px] h-9">
-          <SelectValue placeholder="Filter" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">All Sources</SelectItem>
-          <SelectItem value="youtube">YouTube</SelectItem>
-          <SelectItem value="tiktok">TikTok</SelectItem>
-          <SelectItem value="facebook">Facebook</SelectItem>
-          <SelectItem value="instagram">Instagram</SelectItem>
-          <SelectItem value="twitter">Twitter/X</SelectItem>
-          <SelectItem value="other">Other</SelectItem>
-        </SelectContent>
-      </Select>
-
-      {/* Actions */}
-      <div className="flex gap-2">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={refreshHistory}
-          disabled={loading}
-          className="h-9"
-        >
-          <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-          Refresh
-        </Button>
-
-        <AlertDialog>
-          <AlertDialogTrigger asChild>
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-9 text-destructive hover:text-destructive"
-              disabled={totalCount === 0}
+      {/* Filter tabs and actions */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        {/* Filter tabs */}
+        <div className="inline-flex items-center rounded-lg bg-muted/50 p-1">
+          {filterOptions.map((option) => (
+            <button
+              key={option.value}
+              onClick={() => setFilter(option.value)}
+              className={cn(
+                'px-3 py-1.5 text-xs font-medium rounded-md transition-all',
+                filter === option.value
+                  ? 'bg-background shadow-sm text-foreground'
+                  : 'text-muted-foreground hover:text-foreground'
+              )}
             >
-              <Trash2 className="w-4 h-4 mr-2" />
-              Clear
-            </Button>
-          </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Clear Download History?</AlertDialogTitle>
-              <AlertDialogDescription>
-                This will permanently delete all {totalCount} entries from your download history.
-                This action cannot be undone.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={clearHistory}
-                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              >
-                Clear All
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+              {option.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Actions */}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => refreshHistory()}
+            disabled={loading}
+            className={cn(
+              'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium',
+              'bg-muted/50 hover:bg-muted transition-colors',
+              'text-muted-foreground hover:text-foreground',
+              loading && 'opacity-50'
+            )}
+          >
+            <RefreshCw className={cn('w-4 h-4', loading && 'animate-spin')} />
+            Refresh
+          </button>
+
+          <button
+            onClick={handleClear}
+            disabled={clearing || totalCount === 0}
+            className={cn(
+              'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium',
+              'bg-red-500/10 hover:bg-red-500/20 transition-colors',
+              'text-red-400 hover:text-red-300',
+              (clearing || totalCount === 0) && 'opacity-50 cursor-not-allowed'
+            )}
+          >
+            <Trash2 className="w-4 h-4" />
+            Clear
+          </button>
+        </div>
       </div>
     </div>
   );
