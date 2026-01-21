@@ -8,7 +8,6 @@ import {
   Play,
   HardDrive,
   MonitorPlay,
-  Film,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { DownloadItem, ItemDownloadSettings } from '@/lib/types';

@@ -165,3 +165,22 @@ export interface LogEntry {
 }
 
 export type LogFilter = 'all' | 'command' | 'success' | 'error' | 'stderr';
+
+// History types
+export interface HistoryEntry {
+  id: string;
+  url: string;
+  title: string;
+  thumbnail?: string;
+  filepath: string;
+  filesize?: number;
+  duration?: number;
+  quality?: string;
+  format?: string;
+  source?: string; // "youtube", "tiktok", etc.
+  downloaded_at: string; // ISO 8601
+  file_exists: boolean;
+}
+
+export type HistoryFilter = 'all' | 'youtube' | 'tiktok' | 'facebook' | 'instagram' | 'twitter' | 'other';
+export type HistorySort = 'recent' | 'oldest' | 'title' | 'size';

@@ -28,6 +28,23 @@ pub struct LogEntry {
     pub url: Option<String>,
 }
 
+/// History entry structure
+#[derive(Clone, Serialize, Deserialize, Debug)]
+pub struct HistoryEntry {
+    pub id: String,
+    pub url: String,
+    pub title: String,
+    pub thumbnail: Option<String>,
+    pub filepath: String,
+    pub filesize: Option<u64>,
+    pub duration: Option<u64>,
+    pub quality: Option<String>,
+    pub format: Option<String>,
+    pub source: Option<String>,  // "youtube", "tiktok", etc.
+    pub downloaded_at: String,
+    pub file_exists: bool,
+}
+
 /// Initialize the SQLite database
 fn init_database(app: &AppHandle) -> Result<(), String> {
     if DB_CONNECTION.get().is_some() {
@@ -67,6 +84,35 @@ fn init_database(app: &AppHandle) -> Result<(), String> {
     
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_logs_created ON logs(created_at DESC)",
+        [],
+    ).ok();
+    
+    // Create history table
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS history (
+            id TEXT PRIMARY KEY,
+            url TEXT NOT NULL,
+            title TEXT NOT NULL,
+            thumbnail TEXT,
+            filepath TEXT NOT NULL,
+            filesize INTEGER,
+            duration INTEGER,
+            quality TEXT,
+            format TEXT,
+            source TEXT,
+            downloaded_at INTEGER NOT NULL
+        )",
+        [],
+    ).map_err(|e| format!("Failed to create history table: {}", e))?;
+    
+    // Create history indexes
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_history_downloaded ON history(downloaded_at DESC)",
+        [],
+    ).ok();
+    
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_history_source ON history(source)",
         [],
     ).ok();
     
@@ -128,6 +174,40 @@ fn add_log_internal(
         details: details.map(|s| s.to_string()),
         url: url.map(|s| s.to_string()),
     })
+}
+
+/// Add a history entry (internal use)
+fn add_history_internal(
+    url: String,
+    title: String,
+    thumbnail: Option<String>,
+    filepath: String,
+    filesize: Option<u64>,
+    duration: Option<u64>,
+    quality: Option<String>,
+    format: Option<String>,
+    source: Option<String>,
+) -> Result<(), String> {
+    let conn = get_db()?;
+    let id = uuid::Uuid::new_v4().to_string();
+    let now = Utc::now().timestamp();
+    
+    // Get max entries from default (500)
+    let max_entries: i64 = 500;
+    
+    conn.execute(
+        "INSERT OR REPLACE INTO history (id, url, title, thumbnail, filepath, filesize, duration, quality, format, source, downloaded_at)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
+        params![id, url, title, thumbnail, filepath, filesize, duration, quality, format, source, now],
+    ).map_err(|e| format!("Failed to add history: {}", e))?;
+    
+    // Prune old entries
+    conn.execute(
+        "DELETE FROM history WHERE id NOT IN (SELECT id FROM history ORDER BY downloaded_at DESC LIMIT ?1)",
+        params![max_entries],
+    ).ok();
+    
+    Ok(())
 }
 
 /// Get logs from database with optional filters
@@ -1167,6 +1247,36 @@ async fn download_video(
                                 format.clone()
                             );
                             add_log_internal("success", &success_msg, Some(&details), Some(&url)).ok();
+                            
+                            // Save to history
+                            if let Some(ref filepath) = final_filepath {
+                                // Detect source from URL
+                                let source = if url.contains("youtube.com") || url.contains("youtu.be") {
+                                    Some("youtube".to_string())
+                                } else if url.contains("tiktok.com") {
+                                    Some("tiktok".to_string())
+                                } else if url.contains("facebook.com") || url.contains("fb.watch") {
+                                    Some("facebook".to_string())
+                                } else if url.contains("instagram.com") {
+                                    Some("instagram".to_string())
+                                } else if url.contains("twitter.com") || url.contains("x.com") {
+                                    Some("twitter".to_string())
+                                } else {
+                                    Some("other".to_string())
+                                };
+                                
+                                add_history_internal(
+                                    url.clone(),
+                                    display_title.clone().unwrap_or_else(|| "Unknown".to_string()),
+                                    None, // thumbnail - not available here
+                                    filepath.clone(),
+                                    reported_filesize,
+                                    None, // duration
+                                    quality_display.clone(),
+                                    Some(format.clone()),
+                                    source,
+                                ).ok();
+                            }
                             
                             let progress = DownloadProgress {
                                 id: id.clone(),
@@ -2229,6 +2339,194 @@ async fn get_ffmpeg_path_for_ytdlp(app: AppHandle) -> Result<Option<String>, Str
     Ok(None)
 }
 
+// ============================================================================
+// History Commands
+// ============================================================================
+
+/// Add a download to history
+#[tauri::command]
+fn add_history(
+    url: String,
+    title: String,
+    thumbnail: Option<String>,
+    filepath: String,
+    filesize: Option<u64>,
+    duration: Option<u64>,
+    quality: Option<String>,
+    format: Option<String>,
+    source: Option<String>,
+    max_entries: Option<i64>,
+) -> Result<(), String> {
+    let conn = get_db()?;
+    let id = uuid::Uuid::new_v4().to_string();
+    let now = Utc::now().timestamp();
+    let max = max_entries.unwrap_or(500);
+    
+    conn.execute(
+        "INSERT OR REPLACE INTO history (id, url, title, thumbnail, filepath, filesize, duration, quality, format, source, downloaded_at)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
+        params![id, url, title, thumbnail, filepath, filesize, duration, quality, format, source, now],
+    ).map_err(|e| format!("Failed to add history: {}", e))?;
+    
+    // Prune old entries
+    conn.execute(
+        "DELETE FROM history WHERE id NOT IN (SELECT id FROM history ORDER BY downloaded_at DESC LIMIT ?1)",
+        params![max],
+    ).ok();
+    
+    Ok(())
+}
+
+/// Get history entries with pagination and optional filters
+#[tauri::command]
+fn get_history(
+    limit: Option<i64>,
+    offset: Option<i64>,
+    source_filter: Option<String>,
+    search: Option<String>,
+) -> Result<Vec<HistoryEntry>, String> {
+    let conn = get_db()?;
+    let limit = limit.unwrap_or(50).min(500);
+    let offset = offset.unwrap_or(0);
+    
+    let mut query = String::from(
+        "SELECT id, url, title, thumbnail, filepath, filesize, duration, quality, format, source, downloaded_at 
+         FROM history WHERE 1=1"
+    );
+    
+    if source_filter.is_some() {
+        query.push_str(" AND source = ?1");
+    }
+    
+    if search.is_some() {
+        if source_filter.is_some() {
+            query.push_str(" AND title LIKE ?2");
+        } else {
+            query.push_str(" AND title LIKE ?1");
+        }
+    }
+    
+    query.push_str(" ORDER BY downloaded_at DESC LIMIT ?3 OFFSET ?4");
+    
+    // Build query dynamically based on filters
+    let mut stmt = conn.prepare(&format!(
+        "SELECT id, url, title, thumbnail, filepath, filesize, duration, quality, format, source, downloaded_at 
+         FROM history 
+         WHERE (?1 IS NULL OR source = ?1) AND (?2 IS NULL OR title LIKE '%' || ?2 || '%')
+         ORDER BY downloaded_at DESC LIMIT ?3 OFFSET ?4"
+    )).map_err(|e| format!("Failed to prepare query: {}", e))?;
+    
+    let entries = stmt.query_map(
+        params![source_filter, search, limit, offset],
+        |row| {
+            let filepath: String = row.get(4)?;
+            let file_exists = std::path::Path::new(&filepath).exists();
+            let downloaded_at: i64 = row.get(10)?;
+            
+            Ok(HistoryEntry {
+                id: row.get(0)?,
+                url: row.get(1)?,
+                title: row.get(2)?,
+                thumbnail: row.get(3)?,
+                filepath,
+                filesize: row.get(5)?,
+                duration: row.get(6)?,
+                quality: row.get(7)?,
+                format: row.get(8)?,
+                source: row.get(9)?,
+                downloaded_at: chrono::DateTime::from_timestamp(downloaded_at, 0)
+                    .map(|dt| dt.to_rfc3339())
+                    .unwrap_or_else(|| "Unknown".to_string()),
+                file_exists,
+            })
+        }
+    ).map_err(|e| format!("Failed to query history: {}", e))?;
+    
+    let result: Vec<HistoryEntry> = entries.filter_map(|e| e.ok()).collect();
+    Ok(result)
+}
+
+/// Delete a history entry
+#[tauri::command]
+fn delete_history(id: String) -> Result<(), String> {
+    let conn = get_db()?;
+    conn.execute("DELETE FROM history WHERE id = ?1", params![id])
+        .map_err(|e| format!("Failed to delete history: {}", e))?;
+    Ok(())
+}
+
+/// Clear all history
+#[tauri::command]
+fn clear_history() -> Result<(), String> {
+    let conn = get_db()?;
+    conn.execute("DELETE FROM history", [])
+        .map_err(|e| format!("Failed to clear history: {}", e))?;
+    Ok(())
+}
+
+/// Get history count
+#[tauri::command]
+fn get_history_count() -> Result<i64, String> {
+    let conn = get_db()?;
+    let count: i64 = conn.query_row("SELECT COUNT(*) FROM history", [], |row| row.get(0))
+        .map_err(|e| format!("Failed to count history: {}", e))?;
+    Ok(count)
+}
+
+/// Open file location in system file manager
+#[tauri::command]
+async fn open_file_location(filepath: String) -> Result<(), String> {
+    let path = std::path::Path::new(&filepath);
+    
+    // Get parent directory
+    let folder = if path.is_file() {
+        path.parent().map(|p| p.to_path_buf())
+    } else if path.is_dir() {
+        Some(path.to_path_buf())
+    } else {
+        // File doesn't exist, try parent anyway
+        path.parent().map(|p| p.to_path_buf())
+    };
+    
+    let folder = folder.ok_or_else(|| "Invalid path".to_string())?;
+    
+    if !folder.exists() {
+        return Err("Folder does not exist".to_string());
+    }
+    
+    #[cfg(target_os = "macos")]
+    {
+        std::process::Command::new("open")
+            .arg(&folder)
+            .spawn()
+            .map_err(|e| format!("Failed to open folder: {}", e))?;
+    }
+    
+    #[cfg(target_os = "windows")]
+    {
+        std::process::Command::new("explorer")
+            .arg(&folder)
+            .spawn()
+            .map_err(|e| format!("Failed to open folder: {}", e))?;
+    }
+    
+    #[cfg(target_os = "linux")]
+    {
+        std::process::Command::new("xdg-open")
+            .arg(&folder)
+            .spawn()
+            .map_err(|e| format!("Failed to open folder: {}", e))?;
+    }
+    
+    Ok(())
+}
+
+/// Check if a file exists
+#[tauri::command]
+fn check_file_exists(filepath: String) -> bool {
+    std::path::Path::new(&filepath).exists()
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -2267,7 +2565,15 @@ pub fn run() {
             get_logs,
             add_log,
             clear_logs,
-            export_logs
+            export_logs,
+            // History commands
+            add_history,
+            get_history,
+            delete_history,
+            clear_history,
+            get_history_count,
+            open_file_location,
+            check_file_exists
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

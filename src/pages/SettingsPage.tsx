@@ -2,6 +2,7 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { useDependencies } from '@/contexts/DependenciesContext';
 import { useDownload } from '@/contexts/DownloadContext';
 import { useUpdater } from '@/contexts/UpdaterContext';
+import { useHistory } from '@/contexts/HistoryContext';
 import { themes } from '@/lib/themes';
 import type { ThemeName } from '@/lib/themes';
 import { cn } from '@/lib/utils';
@@ -21,10 +22,18 @@ import {
   Bell,
   Package,
   Info,
+  Database,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 // Gradient backgrounds for theme preview
 const themeGradients: Record<ThemeName, string> = {
@@ -39,6 +48,7 @@ const themeGradients: Record<ThemeName, string> = {
 export function SettingsPage() {
   const { theme, setTheme, mode, setMode } = useTheme();
   const { settings, updateAutoCheckUpdate } = useDownload();
+  const { maxEntries, setMaxEntries, totalCount } = useHistory();
   const updater = useUpdater();
   
   const {
@@ -385,6 +395,49 @@ export function SettingsPage() {
                   ffmpeg.org
                   <ExternalLink className="w-3 h-3" />
                 </a>
+              </div>
+            </div>
+          </section>
+
+          {/* Divider */}
+          <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent" />
+
+          {/* Storage Section */}
+          <section className="space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-xl bg-gradient-to-br from-cyan-500 to-teal-600 shadow-lg shadow-cyan-500/20">
+                <Database className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h2 className="text-base font-semibold">Storage</h2>
+                <p className="text-xs text-muted-foreground">Manage download history</p>
+              </div>
+            </div>
+
+            <div className="space-y-3 pl-12">
+              {/* Max History Entries */}
+              <div className="flex items-center justify-between py-3">
+                <div>
+                  <p className="text-sm font-medium">Max history entries</p>
+                  <p className="text-xs text-muted-foreground">
+                    Currently storing {totalCount} downloads
+                  </p>
+                </div>
+                <Select
+                  value={String(maxEntries)}
+                  onValueChange={(v) => setMaxEntries(parseInt(v, 10))}
+                >
+                  <SelectTrigger className="w-[120px] h-9">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="100">100</SelectItem>
+                    <SelectItem value="250">250</SelectItem>
+                    <SelectItem value="500">500</SelectItem>
+                    <SelectItem value="1000">1,000</SelectItem>
+                    <SelectItem value="2000">2,000</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
           </section>
