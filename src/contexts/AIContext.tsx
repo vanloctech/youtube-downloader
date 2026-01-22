@@ -44,6 +44,7 @@ const defaultConfig: AIConfig = {
   proxy_url: 'https://api.openai.com',
   summary_style: 'short',
   summary_language: 'auto',
+  timeout_seconds: 120,
 };
 
 const AIContext = createContext<AIContextValue | undefined>(undefined);
@@ -161,10 +162,16 @@ export function AIProvider({ children }: { children: ReactNode }) {
   const startSummaryTask = useCallback((historyId: string, url: string) => {
     // Don't start if already running
     if (activeTasksRef.current.has(historyId)) {
+      console.log(`[AI] Task already running for historyId=${historyId}`);
       return;
     }
     
     activeTasksRef.current.add(historyId);
+    
+    // Log task start (for debugging)
+    if (import.meta.env.DEV) {
+      console.log(`[AI] Starting summary task:`, { historyId, url });
+    }
     
     // Initialize task
     setSummaryTasks(prev => {
@@ -177,7 +184,14 @@ export function AIProvider({ children }: { children: ReactNode }) {
     (async () => {
       try {
         // Fetch transcript
+        if (import.meta.env.DEV) {
+          console.log(`[AI] Fetching transcript for URL: ${url}`);
+        }
         const transcript = await invoke<string>('get_video_transcript', { url });
+        
+        if (import.meta.env.DEV) {
+          console.log(`[AI] Got transcript (${transcript.length} chars), first 200:`, transcript.slice(0, 200));
+        }
         
         // Update to generating status
         updateTask(historyId, { status: 'generating' });
@@ -188,10 +202,15 @@ export function AIProvider({ children }: { children: ReactNode }) {
           historyId,
         });
         
+        if (import.meta.env.DEV) {
+          console.log(`[AI] Generated summary for historyId=${historyId}:`, summary.slice(0, 100));
+        }
+        
         // Complete
         updateTask(historyId, { status: 'completed', summary });
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
+        console.error(`[AI] Task failed for historyId=${historyId}:`, message);
         updateTask(historyId, { status: 'error', error: message });
       } finally {
         activeTasksRef.current.delete(historyId);

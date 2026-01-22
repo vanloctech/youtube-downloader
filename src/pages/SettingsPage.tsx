@@ -656,6 +656,29 @@ export function SettingsPage() {
                     </SelectContent>
                   </Select>
                 </div>
+
+                {/* Generation Timeout */}
+                <div className="flex items-center justify-between py-2">
+                  <div>
+                    <p className="text-sm font-medium">Generation Timeout</p>
+                    <p className="text-xs text-muted-foreground">Max time for AI response (local models may need more)</p>
+                  </div>
+                  <Select
+                    value={String(ai.config.timeout_seconds || 120)}
+                    onValueChange={(v) => ai.updateConfig({ timeout_seconds: parseInt(v) })}
+                  >
+                    <SelectTrigger className="w-[120px] h-9">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="60">60 seconds</SelectItem>
+                      <SelectItem value="120">2 minutes</SelectItem>
+                      <SelectItem value="180">3 minutes</SelectItem>
+                      <SelectItem value="300">5 minutes</SelectItem>
+                      <SelectItem value="600">10 minutes</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             )}
           </section>

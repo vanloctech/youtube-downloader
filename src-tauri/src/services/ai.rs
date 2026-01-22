@@ -42,6 +42,7 @@ pub struct AIConfig {
     pub proxy_url: Option<String>, // Custom OpenAI-compatible API endpoint
     pub summary_style: SummaryStyle,
     pub summary_language: String, // "auto", "en", "vi", "ja", etc.
+    pub timeout_seconds: Option<u64>, // Timeout for AI generation (default 120s)
 }
 
 impl Default for AIConfig {
@@ -55,6 +56,7 @@ impl Default for AIConfig {
             proxy_url: Some("https://api.openai.com".to_string()),
             summary_style: SummaryStyle::Short,
             summary_language: "auto".to_string(),
+            timeout_seconds: Some(120),
         }
     }
 }
