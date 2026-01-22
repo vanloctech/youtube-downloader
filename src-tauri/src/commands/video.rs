@@ -8,20 +8,25 @@ use tokio::time::timeout;
 use uuid::Uuid;
 use crate::types::{VideoInfo, FormatOption, VideoInfoResponse, PlaylistVideoEntry, SubtitleInfo};
 use crate::services::run_ytdlp_json;
+use crate::database::add_log_internal;
 
 /// Get video transcript/subtitles for AI summarization
 #[tauri::command]
 pub async fn get_video_transcript(app: AppHandle, url: String) -> Result<String, String> {
-    // Log the URL being processed (for debugging)
+    // Log the URL being processed
     #[cfg(debug_assertions)]
     println!("[TRANSCRIPT] Fetching transcript for URL: {}", &url);
+    
+    add_log_internal("info", &format!("Fetching transcript for AI summary"), None, Some(&url)).ok();
     
     // Create unique temp directory for this request (using UUID to prevent any contamination)
     let request_id = Uuid::new_v4();
     let temp_dir = std::env::temp_dir().join(format!("youwee_subs_{}", request_id));
     
     if let Err(e) = std::fs::create_dir_all(&temp_dir) {
-        return Err(format!("Failed to create temp directory: {}", e));
+        let error_msg = format!("Failed to create temp directory: {}", e);
+        add_log_internal("error", &error_msg, None, Some(&url)).ok();
+        return Err(error_msg);
     }
     
     let temp_path = temp_dir.join("transcript");
@@ -31,7 +36,7 @@ pub async fn get_video_transcript(app: AppHandle, url: String) -> Result<String,
     let url_for_subs = url.clone();
     let url_for_info = url.clone();
     
-    // Try to download subtitles with timeout (30 seconds)
+    // Try to download subtitles with timeout (60 seconds - increased from 30)
     let subtitle_args = vec![
         "--skip-download",
         "--write-auto-subs",
@@ -41,40 +46,57 @@ pub async fn get_video_transcript(app: AppHandle, url: String) -> Result<String,
         "-o", &temp_path_str,
         "--no-warnings",
         "--no-check-certificates",
-        "--no-cache-dir",  // Prevent yt-dlp from using cached data
-        "--socket-timeout", "15",
+        "--no-cache-dir",
+        "--socket-timeout", "30",  // Increased from 15
         &url_for_subs,
     ];
     
     #[cfg(debug_assertions)]
     println!("[TRANSCRIPT] Running yt-dlp for subtitles...");
     
-    // Run with timeout
+    add_log_internal("command", "yt-dlp: Fetching subtitles", Some(&subtitle_args.join(" ")), Some(&url)).ok();
+    
+    // Run with timeout (60 seconds)
     let subtitle_result = timeout(
-        Duration::from_secs(30),
+        Duration::from_secs(60),
         run_ytdlp_json(&app, &subtitle_args.iter().map(|s| *s).collect::<Vec<_>>())
     ).await;
     
     // Check for downloaded subtitle files
     let mut subtitle_files: Vec<std::path::PathBuf> = Vec::new();
     
-    if subtitle_result.is_ok() {
-        if let Ok(entries) = std::fs::read_dir(&temp_dir) {
-            for entry in entries.flatten() {
-                let path = entry.path();
-                if let Some(ext) = path.extension() {
-                    if ext == "vtt" || ext == "srt" {
-                        subtitle_files.push(path);
+    match &subtitle_result {
+        Ok(Ok(_)) => {
+            if let Ok(entries) = std::fs::read_dir(&temp_dir) {
+                for entry in entries.flatten() {
+                    let path = entry.path();
+                    if let Some(ext) = path.extension() {
+                        if ext == "vtt" || ext == "srt" {
+                            subtitle_files.push(path);
+                        }
                     }
                 }
             }
+            
+            #[cfg(debug_assertions)]
+            println!("[TRANSCRIPT] Found {} subtitle files", subtitle_files.len());
+            
+            if subtitle_files.is_empty() {
+                add_log_internal("info", "No subtitle files found", None, Some(&url)).ok();
+            } else {
+                add_log_internal("info", &format!("Found {} subtitle files", subtitle_files.len()), None, Some(&url)).ok();
+            }
         }
-        
-        #[cfg(debug_assertions)]
-        println!("[TRANSCRIPT] Found {} subtitle files", subtitle_files.len());
-    } else {
-        #[cfg(debug_assertions)]
-        println!("[TRANSCRIPT] Subtitle fetch timed out or failed");
+        Ok(Err(e)) => {
+            #[cfg(debug_assertions)]
+            println!("[TRANSCRIPT] Subtitle fetch failed: {}", e);
+            add_log_internal("stderr", &format!("Subtitle fetch failed: {}", e), None, Some(&url)).ok();
+        }
+        Err(_) => {
+            #[cfg(debug_assertions)]
+            println!("[TRANSCRIPT] Subtitle fetch timed out");
+            add_log_internal("stderr", "Subtitle fetch timed out (60s)", None, Some(&url)).ok();
+        }
     }
     
     // Sort files: prefer English and shorter names (manual subs)
@@ -100,8 +122,11 @@ pub async fn get_video_transcript(app: AppHandle, url: String) -> Result<String,
         if let Ok(content) = std::fs::read_to_string(path) {
             let transcript = parse_subtitle_file(&content);
             if !transcript.trim().is_empty() && transcript.split_whitespace().count() > 10 {
+                let word_count = transcript.split_whitespace().count();
                 #[cfg(debug_assertions)]
-                println!("[TRANSCRIPT] Successfully parsed subtitles ({} words)", transcript.split_whitespace().count());
+                println!("[TRANSCRIPT] Successfully parsed subtitles ({} words)", word_count);
+                
+                add_log_internal("success", &format!("Parsed subtitles ({} words)", word_count), None, Some(&url)).ok();
                 
                 // Clean up
                 std::fs::remove_dir_all(&temp_dir).ok();
@@ -116,47 +141,69 @@ pub async fn get_video_transcript(app: AppHandle, url: String) -> Result<String,
     #[cfg(debug_assertions)]
     println!("[TRANSCRIPT] No subtitles found, trying description fallback for URL: {}", &url_for_info);
     
-    // No subtitles found - try to get title and description as fallback
+    add_log_internal("info", "No subtitles available, trying description fallback", None, Some(&url)).ok();
+    
+    // No subtitles found - try to get title and description as fallback (increased timeout to 45s)
     let info_args = vec![
         "--skip-download",
         "--print", "%(title)s|||%(description)s",
         "--no-warnings",
-        "--no-cache-dir",  // Prevent yt-dlp from using cached data
-        "--socket-timeout", "10",
+        "--no-cache-dir",
+        "--socket-timeout", "30",  // Increased from 10
         &url_for_info,
     ];
     
+    add_log_internal("command", "yt-dlp: Fetching video info", Some(&info_args.join(" ")), Some(&url)).ok();
+    
     let info_result = timeout(
-        Duration::from_secs(15),
+        Duration::from_secs(45),  // Increased from 15
         run_ytdlp_json(&app, &info_args.iter().map(|s| *s).collect::<Vec<_>>())
     ).await;
     
-    if let Ok(Ok(info_str)) = info_result {
-        let parts: Vec<&str> = info_str.splitn(2, "|||").collect();
-        let title = parts.first().map(|s| s.trim()).unwrap_or("");
-        let description = parts.get(1).map(|s| s.trim()).unwrap_or("");
-        
-        #[cfg(debug_assertions)]
-        println!("[TRANSCRIPT] Got title: '{}', description length: {}", title, description.len());
-        
-        if !description.is_empty() && description.len() > 50 {
-            // Check if description seems to contain actual content (not just promo/links)
-            if is_description_content_relevant(title, description) {
-                #[cfg(debug_assertions)]
-                println!("[TRANSCRIPT] Description is relevant, using as fallback");
-                
-                return Ok(format!("[Video Description - No subtitles available]\nTitle: {}\n\n{}", title, description));
-            } else {
-                #[cfg(debug_assertions)]
-                println!("[TRANSCRIPT] Description not relevant (promotional content)");
+    match &info_result {
+        Ok(Ok(info_str)) => {
+            let parts: Vec<&str> = info_str.splitn(2, "|||").collect();
+            let title = parts.first().map(|s| s.trim()).unwrap_or("");
+            let description = parts.get(1).map(|s| s.trim()).unwrap_or("");
+            
+            #[cfg(debug_assertions)]
+            println!("[TRANSCRIPT] Got title: '{}', description length: {}", title, description.len());
+            
+            add_log_internal("info", &format!("Got video info - title: '{}', description: {} chars", title, description.len()), None, Some(&url)).ok();
+            
+            if !description.is_empty() && description.len() > 50 {
+                // Check if description seems to contain actual content (not just promo/links)
+                if is_description_content_relevant(title, description) {
+                    #[cfg(debug_assertions)]
+                    println!("[TRANSCRIPT] Description is relevant, using as fallback");
+                    
+                    add_log_internal("success", "Using video description as fallback content", None, Some(&url)).ok();
+                    
+                    return Ok(format!("[Video Description - No subtitles available]\nTitle: {}\n\n{}", title, description));
+                } else {
+                    #[cfg(debug_assertions)]
+                    println!("[TRANSCRIPT] Description not relevant (promotional content)");
+                    
+                    add_log_internal("info", "Description not relevant (promotional content only)", None, Some(&url)).ok();
+                }
             }
         }
-    } else {
-        #[cfg(debug_assertions)]
-        println!("[TRANSCRIPT] Description fetch failed or timed out");
+        Ok(Err(e)) => {
+            #[cfg(debug_assertions)]
+            println!("[TRANSCRIPT] Description fetch failed: {}", e);
+            add_log_internal("stderr", &format!("Description fetch failed: {}", e), None, Some(&url)).ok();
+        }
+        Err(_) => {
+            #[cfg(debug_assertions)]
+            println!("[TRANSCRIPT] Description fetch timed out");
+            add_log_internal("stderr", "Description fetch timed out (45s)", None, Some(&url)).ok();
+        }
     }
     
-    Err("No transcript available. This video has no subtitles, auto-generated captions, or meaningful description to summarize.".to_string())
+    let error_msg = "No transcript available. This video has no subtitles, auto-generated captions, or meaningful description to summarize.";
+    add_log_internal("error", error_msg, None, Some(&url)).ok();
+    
+    Err(error_msg.to_string())
 }
 
 /// Check if video description contains relevant content (lyrics, transcript, etc.)
