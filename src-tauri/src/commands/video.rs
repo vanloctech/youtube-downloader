@@ -9,105 +9,97 @@ use crate::services::run_ytdlp_json;
 /// Get video transcript/subtitles for AI summarization
 #[tauri::command]
 pub async fn get_video_transcript(app: AppHandle, url: String) -> Result<String, String> {
-    // Try to get auto-generated subtitles first, then manual subtitles
-    let args = [
-        "--skip-download",
-        "--write-auto-sub",
-        "--write-sub",
-        "--sub-lang", "en,vi,ja,ko,zh",
-        "--sub-format", "vtt/srt/best",
-        "--print", "%(subtitles)j",
-        "--print", "%(automatic_captions)j",
-        "--no-warnings",
-        &url,
-    ];
-    
-    let output = run_ytdlp_json(&app, &args).await;
-    
-    // If we got subtitle data, try to extract text from it
-    if let Ok(output_str) = output {
-        // Try to parse and extract transcript
-        if let Some(transcript) = extract_transcript_from_output(&output_str) {
-            if !transcript.trim().is_empty() {
-                return Ok(transcript);
-            }
-        }
-    }
-    
-    // Fallback: Try to get subtitles directly and parse VTT
-    let temp_dir = std::env::temp_dir().join("youwee_subs");
+    // Create temp directory for subtitle files
+    let temp_dir = std::env::temp_dir().join(format!("youwee_subs_{}", std::process::id()));
     std::fs::create_dir_all(&temp_dir).ok();
     
     let temp_path = temp_dir.join("transcript");
     let temp_path_str = temp_path.to_string_lossy().to_string();
     
+    // Try to download auto-generated and manual subtitles
+    // Use pattern matching for all language variants (en.*, vi.*, etc.)
     let args = [
         "--skip-download",
-        "--write-auto-sub",
-        "--write-sub",
-        "--sub-lang", "en,vi,ja,ko,zh",
-        "--sub-format", "vtt/srt",
+        "--write-auto-subs",
+        "--write-subs",
+        "--sub-langs", "en.*,vi.*,ja.*,ko.*,zh.*,es.*,fr.*,de.*,pt.*,ru.*",
+        "--convert-subs", "vtt",
         "-o", &temp_path_str,
         "--no-warnings",
+        "--no-check-certificates",
         &url,
     ];
     
     let _ = run_ytdlp_json(&app, &args).await;
     
     // Look for downloaded subtitle files
+    let mut subtitle_files: Vec<std::path::PathBuf> = Vec::new();
+    
     if let Ok(entries) = std::fs::read_dir(&temp_dir) {
         for entry in entries.flatten() {
             let path = entry.path();
             if let Some(ext) = path.extension() {
                 if ext == "vtt" || ext == "srt" {
-                    if let Ok(content) = std::fs::read_to_string(&path) {
-                        let transcript = parse_subtitle_file(&content);
-                        // Clean up
-                        std::fs::remove_file(&path).ok();
-                        if !transcript.trim().is_empty() {
-                            return Ok(transcript);
-                        }
-                    }
+                    subtitle_files.push(path);
                 }
             }
         }
     }
     
-    // Clean up temp dir
+    // Sort files: prefer shorter names (usually manual subs) and English
+    subtitle_files.sort_by(|a, b| {
+        let a_name = a.file_name().unwrap_or_default().to_string_lossy();
+        let b_name = b.file_name().unwrap_or_default().to_string_lossy();
+        
+        // Prefer English
+        let a_is_en = a_name.contains(".en.") || a_name.contains(".en-");
+        let b_is_en = b_name.contains(".en.") || b_name.contains(".en-");
+        
+        if a_is_en && !b_is_en {
+            return std::cmp::Ordering::Less;
+        }
+        if !a_is_en && b_is_en {
+            return std::cmp::Ordering::Greater;
+        }
+        
+        // Then prefer shorter names (manual subs tend to be simpler)
+        a_name.len().cmp(&b_name.len())
+    });
+    
+    // Try to parse each subtitle file until we get content
+    for path in &subtitle_files {
+        if let Ok(content) = std::fs::read_to_string(path) {
+            let transcript = parse_subtitle_file(&content);
+            if !transcript.trim().is_empty() && transcript.split_whitespace().count() > 10 {
+                // Clean up all files
+                for p in &subtitle_files {
+                    std::fs::remove_file(p).ok();
+                }
+                std::fs::remove_dir_all(&temp_dir).ok();
+                return Ok(transcript);
+            }
+        }
+    }
+    
+    // Clean up
     std::fs::remove_dir_all(&temp_dir).ok();
     
-    Err("No transcript available for this video. The video may not have subtitles.".to_string())
-}
-
-/// Extract transcript text from yt-dlp subtitle output
-fn extract_transcript_from_output(output: &str) -> Option<String> {
-    // yt-dlp outputs JSON with subtitle info
-    // Try to parse it and extract text
-    for line in output.lines() {
-        if let Ok(json) = serde_json::from_str::<serde_json::Value>(line) {
-            // Look for subtitle data in the JSON
-            if let Some(obj) = json.as_object() {
-                for (_lang, data) in obj {
-                    if let Some(arr) = data.as_array() {
-                        let mut texts: Vec<String> = Vec::new();
-                        for item in arr {
-                            // Skip if this is just a URL reference
-                            if item.get("url").is_some() {
-                                continue;
-                            }
-                            if let Some(text) = item.get("text").and_then(|v| v.as_str()) {
-                                texts.push(text.to_string());
-                            }
-                        }
-                        if !texts.is_empty() {
-                            return Some(texts.join(" "));
-                        }
-                    }
-                }
-            }
+    // If no subtitles found, try to get video description as fallback context
+    let desc_args = [
+        "--skip-download",
+        "--print", "%(description)s",
+        "--no-warnings",
+        &url,
+    ];
+    
+    if let Ok(description) = run_ytdlp_json(&app, &desc_args).await {
+        let desc = description.trim();
+        if !desc.is_empty() && desc.len() > 100 {
+            return Ok(format!("[Video Description]\n{}", desc));
         }
     }
-    None
+    
+    Err("No transcript available for this video. The video may not have subtitles or auto-generated captions.".to_string())
 }
 
 /// Parse VTT or SRT subtitle file to plain text
