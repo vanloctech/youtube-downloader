@@ -98,6 +98,16 @@ pub fn get_ai_models(provider: String) -> Vec<ModelOption> {
             ModelOption { value: "phi3".to_string(), label: "Phi 3".to_string() },
             ModelOption { value: "deepseek-coder-v2".to_string(), label: "DeepSeek Coder V2".to_string() },
         ],
+        "proxy" => vec![
+            ModelOption { value: "gpt-4o-mini".to_string(), label: "GPT-4o Mini".to_string() },
+            ModelOption { value: "gpt-4o".to_string(), label: "GPT-4o".to_string() },
+            ModelOption { value: "gpt-4-turbo".to_string(), label: "GPT-4 Turbo".to_string() },
+            ModelOption { value: "gpt-3.5-turbo".to_string(), label: "GPT-3.5 Turbo".to_string() },
+            ModelOption { value: "claude-3-5-sonnet-20241022".to_string(), label: "Claude 3.5 Sonnet".to_string() },
+            ModelOption { value: "claude-3-5-haiku-20241022".to_string(), label: "Claude 3.5 Haiku".to_string() },
+            ModelOption { value: "deepseek-chat".to_string(), label: "DeepSeek Chat".to_string() },
+            ModelOption { value: "deepseek-reasoner".to_string(), label: "DeepSeek Reasoner".to_string() },
+        ],
         _ => vec![],
     }
 }

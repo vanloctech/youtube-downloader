@@ -449,21 +449,22 @@ export function SettingsPage() {
                     value={ai.config.provider}
                     onValueChange={(v) => ai.updateConfig({ 
                       provider: v as AIProvider,
-                      model: v === 'gemini' ? 'gemini-2.0-flash' : v === 'openai' ? 'gpt-4o-mini' : 'llama3.2'
+                      model: v === 'gemini' ? 'gemini-2.0-flash' : v === 'openai' ? 'gpt-4o-mini' : v === 'proxy' ? 'gpt-4o-mini' : 'llama3.2'
                     })}
                   >
-                    <SelectTrigger className="w-[140px] h-9">
+                    <SelectTrigger className="w-[160px] h-9">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="gemini">Gemini</SelectItem>
                       <SelectItem value="openai">OpenAI</SelectItem>
+                      <SelectItem value="proxy">Proxy (Custom)</SelectItem>
                       <SelectItem value="ollama">Ollama (Local)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
-                {/* API Key (for Gemini/OpenAI) */}
+                {/* API Key (for Gemini/OpenAI/Proxy) */}
                 {ai.config.provider !== 'ollama' && (
                   <div className="space-y-2">
                     <p className="text-sm font-medium">API Key</p>
@@ -473,7 +474,7 @@ export function SettingsPage() {
                           type={showApiKey ? 'text' : 'password'}
                           value={ai.config.api_key || ''}
                           onChange={(e) => ai.updateConfig({ api_key: e.target.value })}
-                          placeholder={`Enter ${ai.config.provider === 'gemini' ? 'Gemini' : 'OpenAI'} API key`}
+                          placeholder={`Enter ${ai.config.provider === 'gemini' ? 'Gemini' : ai.config.provider === 'proxy' ? 'Proxy' : 'OpenAI'} API key`}
                           className="h-9 pr-10"
                         />
                         <button
@@ -493,17 +494,19 @@ export function SettingsPage() {
                         {ai.isTesting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Test'}
                       </Button>
                     </div>
-                    <p className="text-xs text-muted-foreground">
-                      Get your API key from{' '}
-                      <a 
-                        href={ai.config.provider === 'gemini' ? 'https://aistudio.google.com/apikey' : 'https://platform.openai.com/api-keys'}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-primary hover:underline"
-                      >
-                        {ai.config.provider === 'gemini' ? 'Google AI Studio' : 'OpenAI Platform'}
-                      </a>
-                    </p>
+                    {ai.config.provider !== 'proxy' && (
+                      <p className="text-xs text-muted-foreground">
+                        Get your API key from{' '}
+                        <a 
+                          href={ai.config.provider === 'gemini' ? 'https://aistudio.google.com/apikey' : 'https://platform.openai.com/api-keys'}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-primary hover:underline"
+                        >
+                          {ai.config.provider === 'gemini' ? 'Google AI Studio' : 'OpenAI Platform'}
+                        </a>
+                      </p>
+                    )}
                     {ai.testResult && (
                       <div className={cn(
                         "flex items-center gap-2 text-xs p-2 rounded-lg",
@@ -513,6 +516,23 @@ export function SettingsPage() {
                         {ai.testResult.message}
                       </div>
                     )}
+                  </div>
+                )}
+
+                {/* Proxy URL (for Proxy provider) */}
+                {ai.config.provider === 'proxy' && (
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium">Proxy URL</p>
+                    <Input
+                      type="text"
+                      value={ai.config.proxy_url || 'https://api.openai.com'}
+                      onChange={(e) => ai.updateConfig({ proxy_url: e.target.value })}
+                      placeholder="https://api.openai.com"
+                      className="h-9"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      OpenAI-compatible API endpoint (e.g., Azure OpenAI, LiteLLM, OpenRouter)
+                    </p>
                   </div>
                 )}
 

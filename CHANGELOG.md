@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - AI-powered video summarization with support for Gemini, OpenAI, and Ollama (local)
+- Proxy AI provider for OpenAI-compatible APIs with custom domain (Azure, LiteLLM, OpenRouter)
 - Video transcript extraction from YouTube subtitles
 - AI settings in Settings page (provider, model, language, summary style)
 - Generate/regenerate summary button in Library for each download

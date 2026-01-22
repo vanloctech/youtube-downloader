@@ -189,7 +189,7 @@ export type HistoryFilter = 'all' | 'youtube' | 'tiktok' | 'facebook' | 'instagr
 export type HistorySort = 'recent' | 'oldest' | 'title' | 'size';
 
 // AI types
-export type AIProvider = 'gemini' | 'openai' | 'ollama';
+export type AIProvider = 'gemini' | 'openai' | 'ollama' | 'proxy';
 export type SummaryStyle = 'short' | 'detailed';
 
 export interface AIConfig {
@@ -198,6 +198,7 @@ export interface AIConfig {
   api_key?: string;
   model: string;
   ollama_url?: string;
+  proxy_url?: string; // Custom OpenAI-compatible API endpoint
   summary_style: SummaryStyle;
   summary_language: string;
 }
