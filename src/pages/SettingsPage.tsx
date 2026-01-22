@@ -5,8 +5,10 @@ import { useDependencies } from '@/contexts/DependenciesContext';
 import { useDownload } from '@/contexts/DownloadContext';
 import { useUpdater } from '@/contexts/UpdaterContext';
 import { useHistory } from '@/contexts/HistoryContext';
+import { useAI } from '@/contexts/AIContext';
 import { themes } from '@/lib/themes';
 import type { ThemeName } from '@/lib/themes';
+import type { AIProvider, SummaryStyle } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { 
   Check, 
@@ -24,10 +26,15 @@ import {
   Package,
   Info,
   Database,
+  Sparkles,
+  Eye,
+  EyeOff,
+  AlertCircle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
+import { Input } from '@/components/ui/input';
 import {
   Select,
   SelectContent,
@@ -51,7 +58,9 @@ export function SettingsPage() {
   const { settings, updateAutoCheckUpdate, updateUseBunRuntime } = useDownload();
   const { maxEntries, setMaxEntries, totalCount } = useHistory();
   const updater = useUpdater();
+  const ai = useAI();
   const [appVersion, setAppVersion] = useState('');
+  const [showApiKey, setShowApiKey] = useState(false);
 
   // Get app version from Tauri
   useEffect(() => {
@@ -407,6 +416,217 @@ export function SettingsPage() {
                 </a>
               </div>
             </div>
+          </section>
+
+          {/* Divider */}
+          <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent" />
+
+          {/* AI Features Section */}
+          <section className="space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-600 shadow-lg shadow-purple-500/20">
+                <Sparkles className="w-5 h-5 text-white" />
+              </div>
+              <div className="flex-1">
+                <h2 className="text-base font-semibold">AI Features</h2>
+                <p className="text-xs text-muted-foreground">Smart video summarization</p>
+              </div>
+              <Switch
+                checked={ai.config.enabled}
+                onCheckedChange={(enabled) => ai.updateConfig({ enabled })}
+              />
+            </div>
+
+            {ai.config.enabled && (
+              <div className="space-y-4 pl-12">
+                {/* Provider Selection */}
+                <div className="flex items-center justify-between py-2">
+                  <div>
+                    <p className="text-sm font-medium">AI Provider</p>
+                    <p className="text-xs text-muted-foreground">Choose your AI service</p>
+                  </div>
+                  <Select
+                    value={ai.config.provider}
+                    onValueChange={(v) => ai.updateConfig({ 
+                      provider: v as AIProvider,
+                      model: v === 'gemini' ? 'gemini-2.0-flash' : v === 'openai' ? 'gpt-4o-mini' : 'llama3.2'
+                    })}
+                  >
+                    <SelectTrigger className="w-[140px] h-9">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="gemini">Gemini</SelectItem>
+                      <SelectItem value="openai">OpenAI</SelectItem>
+                      <SelectItem value="ollama">Ollama (Local)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* API Key (for Gemini/OpenAI) */}
+                {ai.config.provider !== 'ollama' && (
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium">API Key</p>
+                    <div className="flex items-center gap-2">
+                      <div className="relative flex-1">
+                        <Input
+                          type={showApiKey ? 'text' : 'password'}
+                          value={ai.config.api_key || ''}
+                          onChange={(e) => ai.updateConfig({ api_key: e.target.value })}
+                          placeholder={`Enter ${ai.config.provider === 'gemini' ? 'Gemini' : 'OpenAI'} API key`}
+                          className="h-9 pr-10"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowApiKey(!showApiKey)}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground"
+                        >
+                          {showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={ai.testConnection}
+                        disabled={ai.isTesting || !ai.config.api_key}
+                      >
+                        {ai.isTesting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Test'}
+                      </Button>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Get your API key from{' '}
+                      <a 
+                        href={ai.config.provider === 'gemini' ? 'https://aistudio.google.com/apikey' : 'https://platform.openai.com/api-keys'}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary hover:underline"
+                      >
+                        {ai.config.provider === 'gemini' ? 'Google AI Studio' : 'OpenAI Platform'}
+                      </a>
+                    </p>
+                    {ai.testResult && (
+                      <div className={cn(
+                        "flex items-center gap-2 text-xs p-2 rounded-lg",
+                        ai.testResult.success ? "bg-emerald-500/10 text-emerald-500" : "bg-destructive/10 text-destructive"
+                      )}>
+                        {ai.testResult.success ? <CheckCircle2 className="w-3.5 h-3.5" /> : <AlertCircle className="w-3.5 h-3.5" />}
+                        {ai.testResult.message}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Ollama URL */}
+                {ai.config.provider === 'ollama' && (
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium">Ollama URL</p>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="text"
+                        value={ai.config.ollama_url || 'http://localhost:11434'}
+                        onChange={(e) => ai.updateConfig({ ollama_url: e.target.value })}
+                        placeholder="http://localhost:11434"
+                        className="h-9 flex-1"
+                      />
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={ai.testConnection}
+                        disabled={ai.isTesting}
+                      >
+                        {ai.isTesting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Test'}
+                      </Button>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Run Ollama locally for free AI summarization.{' '}
+                      <a 
+                        href="https://ollama.com"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary hover:underline"
+                      >
+                        Download Ollama
+                      </a>
+                    </p>
+                    {ai.testResult && (
+                      <div className={cn(
+                        "flex items-center gap-2 text-xs p-2 rounded-lg",
+                        ai.testResult.success ? "bg-emerald-500/10 text-emerald-500" : "bg-destructive/10 text-destructive"
+                      )}>
+                        {ai.testResult.success ? <CheckCircle2 className="w-3.5 h-3.5" /> : <AlertCircle className="w-3.5 h-3.5" />}
+                        {ai.testResult.message}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Model Selection */}
+                <div className="flex items-center justify-between py-2">
+                  <div>
+                    <p className="text-sm font-medium">Model</p>
+                    <p className="text-xs text-muted-foreground">AI model for summarization</p>
+                  </div>
+                  <Select
+                    value={ai.config.model}
+                    onValueChange={(v) => ai.updateConfig({ model: v })}
+                  >
+                    <SelectTrigger className="w-[180px] h-9">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {ai.models.map((m) => (
+                        <SelectItem key={m.value} value={m.value}>
+                          {m.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Summary Style */}
+                <div className="flex items-center justify-between py-2">
+                  <div>
+                    <p className="text-sm font-medium">Summary Style</p>
+                    <p className="text-xs text-muted-foreground">How detailed the summary should be</p>
+                  </div>
+                  <Select
+                    value={ai.config.summary_style}
+                    onValueChange={(v) => ai.updateConfig({ summary_style: v as SummaryStyle })}
+                  >
+                    <SelectTrigger className="w-[140px] h-9">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="short">Short (2-3 sentences)</SelectItem>
+                      <SelectItem value="detailed">Detailed (bullet points)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Summary Language */}
+                <div className="flex items-center justify-between py-2">
+                  <div>
+                    <p className="text-sm font-medium">Summary Language</p>
+                    <p className="text-xs text-muted-foreground">Language for generated summaries</p>
+                  </div>
+                  <Select
+                    value={ai.config.summary_language}
+                    onValueChange={(v) => ai.updateConfig({ summary_language: v })}
+                  >
+                    <SelectTrigger className="w-[160px] h-9">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {ai.languages.map((l) => (
+                        <SelectItem key={l.value} value={l.value}>
+                          {l.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            )}
           </section>
 
           {/* Divider */}

@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { useHistory } from '@/contexts/HistoryContext';
+import { useAI } from '@/contexts/AIContext';
 import { cn } from '@/lib/utils';
 import type { HistoryEntry } from '@/lib/types';
 import { 
@@ -14,6 +15,10 @@ import {
   ExternalLink,
   Copy,
   Check,
+  Sparkles,
+  RefreshCw,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 
 interface HistoryItemProps {
@@ -65,10 +70,15 @@ function getSourceConfig(source?: string): { icon: string; label: string; color:
 
 export function HistoryItem({ entry }: HistoryItemProps) {
   const { openFileLocation, deleteEntry, redownload } = useHistory();
+  const ai = useAI();
   const [isDeleting, setIsDeleting] = useState(false);
   const [isRedownloading, setIsRedownloading] = useState(false);
   const [redownloadError, setRedownloadError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
+  const [summaryError, setSummaryError] = useState<string | null>(null);
+  const [localSummary, setLocalSummary] = useState<string | undefined>(entry.summary);
+  const [showFullSummary, setShowFullSummary] = useState(false);
 
   const sourceConfig = getSourceConfig(entry.source);
 
@@ -110,6 +120,26 @@ export function HistoryItem({ entry }: HistoryItemProps) {
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   }, [entry.url]);
+
+  const handleGenerateSummary = useCallback(async () => {
+    if (!ai.config.enabled) return;
+    
+    setIsGeneratingSummary(true);
+    setSummaryError(null);
+    
+    try {
+      // Fetch transcript first
+      const transcript = await ai.fetchTranscript(entry.url);
+      // Generate summary
+      const summary = await ai.generateSummary(transcript, entry.id);
+      setLocalSummary(summary);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      setSummaryError(message);
+    } finally {
+      setIsGeneratingSummary(false);
+    }
+  }, [ai, entry.url, entry.id]);
 
   return (
     <div
@@ -187,6 +217,75 @@ export function HistoryItem({ entry }: HistoryItemProps) {
                 {formatRelativeTime(entry.downloaded_at)}
               </span>
             </div>
+
+            {/* AI Summary */}
+            {ai.config.enabled && (
+              <div className="mt-2">
+                {localSummary ? (
+                  <div className="p-2 rounded-lg bg-purple-500/5 border border-purple-500/10">
+                    <div className="flex items-start gap-2">
+                      <Sparkles className="w-3.5 h-3.5 text-purple-500 flex-shrink-0 mt-0.5" />
+                      <div className="flex-1 min-w-0">
+                        <p className={cn(
+                          "text-xs text-muted-foreground leading-relaxed",
+                          !showFullSummary && "line-clamp-2"
+                        )}>
+                          {localSummary}
+                        </p>
+                        {localSummary.length > 150 && (
+                          <button
+                            onClick={() => setShowFullSummary(!showFullSummary)}
+                            className="text-xs text-purple-500 hover:text-purple-400 mt-1 flex items-center gap-0.5"
+                          >
+                            {showFullSummary ? (
+                              <>Show less <ChevronUp className="w-3 h-3" /></>
+                            ) : (
+                              <>Show more <ChevronDown className="w-3 h-3" /></>
+                            )}
+                          </button>
+                        )}
+                      </div>
+                      <button
+                        onClick={handleGenerateSummary}
+                        disabled={isGeneratingSummary}
+                        className="p-1 rounded text-muted-foreground hover:text-purple-500 transition-colors"
+                        title="Regenerate summary"
+                      >
+                        {isGeneratingSummary ? (
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                        ) : (
+                          <RefreshCw className="w-3 h-3" />
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    onClick={handleGenerateSummary}
+                    disabled={isGeneratingSummary}
+                    className={cn(
+                      "flex items-center gap-1.5 text-xs text-purple-500 hover:text-purple-400 transition-colors",
+                      isGeneratingSummary && "opacity-50"
+                    )}
+                  >
+                    {isGeneratingSummary ? (
+                      <>
+                        <Loader2 className="w-3 h-3 animate-spin" />
+                        Generating summary...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-3 h-3" />
+                        Generate AI summary
+                      </>
+                    )}
+                  </button>
+                )}
+                {summaryError && (
+                  <p className="text-xs text-destructive mt-1">{summaryError}</p>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Error message */}

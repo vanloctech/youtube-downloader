@@ -182,7 +182,32 @@ export interface HistoryEntry {
   source?: string; // "youtube", "tiktok", etc.
   downloaded_at: string; // ISO 8601
   file_exists: boolean;
+  summary?: string; // AI-generated summary
 }
 
 export type HistoryFilter = 'all' | 'youtube' | 'tiktok' | 'facebook' | 'instagram' | 'twitter' | 'other';
 export type HistorySort = 'recent' | 'oldest' | 'title' | 'size';
+
+// AI types
+export type AIProvider = 'gemini' | 'openai' | 'ollama';
+export type SummaryStyle = 'short' | 'detailed';
+
+export interface AIConfig {
+  enabled: boolean;
+  provider: AIProvider;
+  api_key?: string;
+  model: string;
+  ollama_url?: string;
+  summary_style: SummaryStyle;
+  summary_language: string;
+}
+
+export interface ModelOption {
+  value: string;
+  label: string;
+}
+
+export interface LanguageOption {
+  value: string;
+  label: string;
+}

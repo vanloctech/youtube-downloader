@@ -1,7 +1,7 @@
-use rusqlite::params;
-use chrono::Utc;
-use crate::types::HistoryEntry;
 use super::get_db;
+use crate::types::HistoryEntry;
+use chrono::Utc;
+use rusqlite::params;
 
 /// Add a history entry (internal use)
 pub fn add_history_internal(
@@ -14,26 +14,37 @@ pub fn add_history_internal(
     quality: Option<String>,
     format: Option<String>,
     source: Option<String>,
-) -> Result<(), String> {
+) -> Result<String, String> {
     let conn = get_db()?;
     let id = uuid::Uuid::new_v4().to_string();
     let now = Utc::now().timestamp();
-    
+
     // Get max entries from default (500)
     let max_entries: i64 = 500;
-    
+
     conn.execute(
         "INSERT OR REPLACE INTO history (id, url, title, thumbnail, filepath, filesize, duration, quality, format, source, downloaded_at)
          VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
         params![id, url, title, thumbnail, filepath, filesize, duration, quality, format, source, now],
     ).map_err(|e| format!("Failed to add history: {}", e))?;
-    
+
     // Prune old entries
     conn.execute(
         "DELETE FROM history WHERE id NOT IN (SELECT id FROM history ORDER BY downloaded_at DESC LIMIT ?1)",
         params![max_entries],
     ).ok();
-    
+
+    Ok(id)
+}
+
+/// Update summary for a history entry
+pub fn update_history_summary(id: String, summary: String) -> Result<(), String> {
+    let conn = get_db()?;
+    conn.execute(
+        "UPDATE history SET summary = ?1 WHERE id = ?2",
+        params![summary, id],
+    )
+    .map_err(|e| format!("Failed to update summary: {}", e))?;
     Ok(())
 }
 
@@ -44,26 +55,30 @@ pub fn get_history_from_db(
     source: Option<String>,
 ) -> Result<Vec<HistoryEntry>, String> {
     let conn = get_db()?;
-    
+
     let limit = limit.unwrap_or(50).min(500);
     let offset = offset.unwrap_or(0);
-    
+
     let mut query = String::from(
-        "SELECT id, url, title, thumbnail, filepath, filesize, duration, quality, format, source, downloaded_at 
+        "SELECT id, url, title, thumbnail, filepath, filesize, duration, quality, format, source, downloaded_at, summary 
          FROM history WHERE 1=1"
     );
-    
-    let source_filter = source.as_ref().map(|s| s != "all" && !s.is_empty()).unwrap_or(false);
-    
+
+    let source_filter = source
+        .as_ref()
+        .map(|s| s != "all" && !s.is_empty())
+        .unwrap_or(false);
+
     if source_filter {
         query.push_str(" AND source = ?1 ORDER BY downloaded_at DESC LIMIT ?2 OFFSET ?3");
     } else {
         query.push_str(" ORDER BY downloaded_at DESC LIMIT ?1 OFFSET ?2");
     }
-    
-    let mut stmt = conn.prepare(&query)
+
+    let mut stmt = conn
+        .prepare(&query)
         .map_err(|e| format!("Failed to prepare query: {}", e))?;
-    
+
     fn parse_row(row: &rusqlite::Row) -> rusqlite::Result<HistoryEntry> {
         let filepath: String = row.get(4)?;
         let file_exists = std::path::Path::new(&filepath).exists();
@@ -71,7 +86,7 @@ pub fn get_history_from_db(
         let dt = chrono::DateTime::from_timestamp(downloaded_at, 0)
             .map(|d| d.to_rfc3339())
             .unwrap_or_default();
-        
+
         Ok(HistoryEntry {
             id: row.get(0)?,
             url: row.get(1)?,
@@ -85,9 +100,10 @@ pub fn get_history_from_db(
             source: row.get(9)?,
             downloaded_at: dt,
             file_exists,
+            summary: row.get(11)?,
         })
     }
-    
+
     let entries: Vec<HistoryEntry> = if source_filter {
         let s = source.as_ref().unwrap();
         stmt.query_map(params![s, limit, offset], parse_row)
@@ -100,7 +116,7 @@ pub fn get_history_from_db(
             .filter_map(|r| r.ok())
             .collect()
     };
-    
+
     Ok(entries)
 }
 
@@ -123,10 +139,8 @@ pub fn clear_history_from_db() -> Result<(), String> {
 /// Get history count
 pub fn get_history_count_from_db() -> Result<i64, String> {
     let conn = get_db()?;
-    let count: i64 = conn.query_row(
-        "SELECT COUNT(*) FROM history",
-        [],
-        |row| row.get(0),
-    ).map_err(|e| format!("Failed to count history: {}", e))?;
+    let count: i64 = conn
+        .query_row("SELECT COUNT(*) FROM history", [], |row| row.get(0))
+        .map_err(|e| format!("Failed to count history: {}", e))?;
     Ok(count)
 }

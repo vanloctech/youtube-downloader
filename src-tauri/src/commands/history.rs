@@ -1,7 +1,7 @@
 use crate::types::HistoryEntry;
 use crate::database::{
     add_history_internal, get_history_from_db, delete_history_from_db,
-    clear_history_from_db, get_history_count_from_db
+    clear_history_from_db, get_history_count_from_db, update_history_summary
 };
 
 #[tauri::command]
@@ -15,8 +15,13 @@ pub fn add_history(
     quality: Option<String>,
     format: Option<String>,
     source: Option<String>,
-) -> Result<(), String> {
+) -> Result<String, String> {
     add_history_internal(url, title, thumbnail, filepath, filesize, duration, quality, format, source)
+}
+
+#[tauri::command]
+pub fn update_summary(id: String, summary: String) -> Result<(), String> {
+    update_history_summary(id, summary)
 }
 
 #[tauri::command]

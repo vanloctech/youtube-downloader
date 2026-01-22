@@ -12,7 +12,8 @@ pub struct HistoryEntry {
     pub duration: Option<u64>,
     pub quality: Option<String>,
     pub format: Option<String>,
-    pub source: Option<String>,  // "youtube", "tiktok", etc.
+    pub source: Option<String>, // "youtube", "tiktok", etc.
     pub downloaded_at: String,
     pub file_exists: bool,
+    pub summary: Option<String>, // AI-generated summary
 }

@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- AI-powered video summarization with support for Gemini, OpenAI, and Ollama (local)
+- Video transcript extraction from YouTube subtitles
+- AI settings in Settings page (provider, model, language, summary style)
+- Generate/regenerate summary button in Library for each download
+
 ### Changed
 - Redesigned download settings with clear Video/Audio toggle for better UX
 - Merged App Updates section into About section in Settings for cleaner UI

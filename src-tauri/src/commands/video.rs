@@ -6,6 +6,157 @@ use tokio::process::Command;
 use crate::types::{VideoInfo, FormatOption, VideoInfoResponse, PlaylistVideoEntry, SubtitleInfo};
 use crate::services::run_ytdlp_json;
 
+/// Get video transcript/subtitles for AI summarization
+#[tauri::command]
+pub async fn get_video_transcript(app: AppHandle, url: String) -> Result<String, String> {
+    // Try to get auto-generated subtitles first, then manual subtitles
+    let args = [
+        "--skip-download",
+        "--write-auto-sub",
+        "--write-sub",
+        "--sub-lang", "en,vi,ja,ko,zh",
+        "--sub-format", "vtt/srt/best",
+        "--print", "%(subtitles)j",
+        "--print", "%(automatic_captions)j",
+        "--no-warnings",
+        &url,
+    ];
+    
+    let output = run_ytdlp_json(&app, &args).await;
+    
+    // If we got subtitle data, try to extract text from it
+    if let Ok(output_str) = output {
+        // Try to parse and extract transcript
+        if let Some(transcript) = extract_transcript_from_output(&output_str) {
+            if !transcript.trim().is_empty() {
+                return Ok(transcript);
+            }
+        }
+    }
+    
+    // Fallback: Try to get subtitles directly and parse VTT
+    let temp_dir = std::env::temp_dir().join("youwee_subs");
+    std::fs::create_dir_all(&temp_dir).ok();
+    
+    let temp_path = temp_dir.join("transcript");
+    let temp_path_str = temp_path.to_string_lossy().to_string();
+    
+    let args = [
+        "--skip-download",
+        "--write-auto-sub",
+        "--write-sub",
+        "--sub-lang", "en,vi,ja,ko,zh",
+        "--sub-format", "vtt/srt",
+        "-o", &temp_path_str,
+        "--no-warnings",
+        &url,
+    ];
+    
+    let _ = run_ytdlp_json(&app, &args).await;
+    
+    // Look for downloaded subtitle files
+    if let Ok(entries) = std::fs::read_dir(&temp_dir) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if let Some(ext) = path.extension() {
+                if ext == "vtt" || ext == "srt" {
+                    if let Ok(content) = std::fs::read_to_string(&path) {
+                        let transcript = parse_subtitle_file(&content);
+                        // Clean up
+                        std::fs::remove_file(&path).ok();
+                        if !transcript.trim().is_empty() {
+                            return Ok(transcript);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    // Clean up temp dir
+    std::fs::remove_dir_all(&temp_dir).ok();
+    
+    Err("No transcript available for this video. The video may not have subtitles.".to_string())
+}
+
+/// Extract transcript text from yt-dlp subtitle output
+fn extract_transcript_from_output(output: &str) -> Option<String> {
+    // yt-dlp outputs JSON with subtitle info
+    // Try to parse it and extract text
+    for line in output.lines() {
+        if let Ok(json) = serde_json::from_str::<serde_json::Value>(line) {
+            // Look for subtitle data in the JSON
+            if let Some(obj) = json.as_object() {
+                for (_lang, data) in obj {
+                    if let Some(arr) = data.as_array() {
+                        let mut texts: Vec<String> = Vec::new();
+                        for item in arr {
+                            // Skip if this is just a URL reference
+                            if item.get("url").is_some() {
+                                continue;
+                            }
+                            if let Some(text) = item.get("text").and_then(|v| v.as_str()) {
+                                texts.push(text.to_string());
+                            }
+                        }
+                        if !texts.is_empty() {
+                            return Some(texts.join(" "));
+                        }
+                    }
+                }
+            }
+        }
+    }
+    None
+}
+
+/// Parse VTT or SRT subtitle file to plain text
+fn parse_subtitle_file(content: &str) -> String {
+    let mut texts: Vec<String> = Vec::new();
+    
+    for line in content.lines() {
+        let line = line.trim();
+        
+        // Skip empty lines
+        if line.is_empty() {
+            continue;
+        }
+        
+        // Skip VTT header
+        if line.starts_with("WEBVTT") || line.starts_with("NOTE") {
+            continue;
+        }
+        
+        // Skip timestamp lines (VTT: 00:00:00.000 --> 00:00:00.000, SRT: 00:00:00,000 --> 00:00:00,000)
+        if line.contains("-->") {
+            continue;
+        }
+        
+        // Skip numeric cue identifiers (SRT format)
+        if line.chars().all(|c| c.is_ascii_digit()) {
+            continue;
+        }
+        
+        // Skip position/styling lines
+        if line.starts_with("align:") || line.starts_with("position:") || line.contains("::") {
+            continue;
+        }
+        
+        // Remove HTML-like tags
+        let clean_line = regex::Regex::new(r"<[^>]+>")
+            .map(|re| re.replace_all(line, "").to_string())
+            .unwrap_or_else(|_| line.to_string());
+        
+        let clean_line = clean_line.trim();
+        
+        if !clean_line.is_empty() && !texts.last().map(|l| l == clean_line).unwrap_or(false) {
+            texts.push(clean_line.to_string());
+        }
+    }
+    
+    texts.join(" ")
+}
+
 #[tauri::command]
 pub async fn get_video_info(app: AppHandle, url: String) -> Result<VideoInfoResponse, String> {
     let args = [

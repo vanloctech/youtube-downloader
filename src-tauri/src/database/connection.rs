@@ -12,18 +12,19 @@ pub fn init_database(app: &AppHandle) -> Result<(), String> {
     if DB_CONNECTION.get().is_some() {
         return Ok(());
     }
-    
-    let app_data_dir = app.path().app_data_dir()
+
+    let app_data_dir = app
+        .path()
+        .app_data_dir()
         .map_err(|e| format!("Failed to get app data directory: {}", e))?;
-    
+
     std::fs::create_dir_all(&app_data_dir)
         .map_err(|e| format!("Failed to create app data directory: {}", e))?;
-    
+
     let db_path = app_data_dir.join("logs.db");
-    
-    let conn = Connection::open(&db_path)
-        .map_err(|e| format!("Failed to open database: {}", e))?;
-    
+
+    let conn = Connection::open(&db_path).map_err(|e| format!("Failed to open database: {}", e))?;
+
     // Create logs table
     conn.execute(
         "CREATE TABLE IF NOT EXISTS logs (
@@ -36,19 +37,22 @@ pub fn init_database(app: &AppHandle) -> Result<(), String> {
             created_at INTEGER NOT NULL
         )",
         [],
-    ).map_err(|e| format!("Failed to create logs table: {}", e))?;
-    
+    )
+    .map_err(|e| format!("Failed to create logs table: {}", e))?;
+
     // Create indexes
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_logs_type ON logs(log_type)",
         [],
-    ).ok();
-    
+    )
+    .ok();
+
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_logs_created ON logs(created_at DESC)",
         [],
-    ).ok();
-    
+    )
+    .ok();
+
     // Create history table
     conn.execute(
         "CREATE TABLE IF NOT EXISTS history (
@@ -62,31 +66,41 @@ pub fn init_database(app: &AppHandle) -> Result<(), String> {
             quality TEXT,
             format TEXT,
             source TEXT,
-            downloaded_at INTEGER NOT NULL
+            downloaded_at INTEGER NOT NULL,
+            summary TEXT
         )",
         [],
-    ).map_err(|e| format!("Failed to create history table: {}", e))?;
-    
+    )
+    .map_err(|e| format!("Failed to create history table: {}", e))?;
+
+    // Migration: Add summary column if it doesn't exist
+    conn.execute("ALTER TABLE history ADD COLUMN summary TEXT", [])
+        .ok(); // Ignore error if column already exists
+
     // Create history indexes
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_history_downloaded ON history(downloaded_at DESC)",
         [],
-    ).ok();
-    
+    )
+    .ok();
+
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_history_source ON history(source)",
         [],
-    ).ok();
-    
-    DB_CONNECTION.set(Mutex::new(conn))
+    )
+    .ok();
+
+    DB_CONNECTION
+        .set(Mutex::new(conn))
         .map_err(|_| "Database already initialized".to_string())?;
-    
+
     Ok(())
 }
 
 /// Get database connection
 pub fn get_db() -> Result<std::sync::MutexGuard<'static, Connection>, String> {
-    DB_CONNECTION.get()
+    DB_CONNECTION
+        .get()
         .ok_or_else(|| "Database not initialized".to_string())?
         .lock()
         .map_err(|e| format!("Failed to acquire database lock: {}", e))

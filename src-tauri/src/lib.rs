@@ -46,6 +46,7 @@ pub fn run() {
             commands::get_video_info,
             commands::get_playlist_entries,
             commands::get_available_subtitles,
+            commands::get_video_transcript,
             // yt-dlp commands
             commands::get_ytdlp_version,
             commands::check_ytdlp_update,
@@ -70,6 +71,14 @@ pub fn run() {
             commands::get_history_count,
             commands::open_file_location,
             commands::check_file_exists,
+            commands::update_summary,
+            // AI commands
+            commands::save_ai_config,
+            commands::get_ai_config,
+            commands::test_ai_connection,
+            commands::generate_video_summary,
+            commands::get_ai_models,
+            commands::get_summary_languages,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

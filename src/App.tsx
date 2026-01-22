@@ -6,6 +6,7 @@ import { UniversalProvider } from '@/contexts/UniversalContext';
 import { LogProvider } from '@/contexts/LogContext';
 import { HistoryProvider } from '@/contexts/HistoryContext';
 import { UpdaterProvider, useUpdater } from '@/contexts/UpdaterContext';
+import { AIProvider } from '@/contexts/AIContext';
 import { MainLayout } from '@/components/layout';
 import type { Page } from '@/components/layout';
 import { DownloadPage, UniversalPage, HistoryPage, LogsPage, SettingsPage } from '@/pages';
@@ -87,9 +88,11 @@ function App() {
           <UniversalProvider>
             <LogProvider>
               <HistoryProvider>
-                <UpdaterWrapper>
-                  <AppContent />
-                </UpdaterWrapper>
+                <AIProvider>
+                  <UpdaterWrapper>
+                    <AppContent />
+                  </UpdaterWrapper>
+                </AIProvider>
               </HistoryProvider>
             </LogProvider>
           </UniversalProvider>
