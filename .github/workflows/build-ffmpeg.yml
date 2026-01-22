@@ -12,9 +12,16 @@ on:
 permissions:
   contents: write
 
+env:
+  FFMPEG_VERSION: ${{ inputs.ffmpeg_version || 'master' }}
+
 jobs:
   build-macos-arm:
     runs-on: macos-14  # Apple Silicon runner
+    
+    env:
+      BUILD_DIR: ${{ github.workspace }}/ffmpeg_build
+      INSTALL_DIR: ${{ github.workspace }}/ffmpeg_install
     
     steps:
       - name: Checkout repository
@@ -22,15 +29,9 @@ jobs:
 
       - name: Setup build environment
         run: |
-          mkdir -p ${{ github.workspace }}/ffmpeg_build
-          mkdir -p ${{ github.workspace }}/ffmpeg_install
-          
-          echo "BUILD_DIR=${{ github.workspace }}/ffmpeg_build" >> $GITHUB_ENV
-          echo "INSTALL_DIR=${{ github.workspace }}/ffmpeg_install" >> $GITHUB_ENV
-          echo "PATH=${{ github.workspace }}/ffmpeg_install/bin:$PATH" >> $GITHUB_ENV
-          echo "PKG_CONFIG_PATH=${{ github.workspace }}/ffmpeg_install/lib/pkgconfig" >> $GITHUB_ENV
-          echo "LDFLAGS=-L${{ github.workspace }}/ffmpeg_install/lib" >> $GITHUB_ENV
-          echo "CFLAGS=-I${{ github.workspace }}/ffmpeg_install/include" >> $GITHUB_ENV
+          mkdir -p $BUILD_DIR
+          mkdir -p $INSTALL_DIR
+          mkdir -p $INSTALL_DIR/lib/pkgconfig
 
       - name: Install build tools
         run: |
@@ -48,6 +49,8 @@ jobs:
                       --enable-pic
           make -j$(sysctl -n hw.ncpu)
           make install
+        env:
+          PKG_CONFIG_PATH: ${{ github.workspace }}/ffmpeg_install/lib/pkgconfig
 
       - name: Build x265
         run: |
@@ -62,6 +65,13 @@ jobs:
                 ../source
           make -j$(sysctl -n hw.ncpu)
           make install
+          
+          # Verify x265 was installed correctly
+          echo "=== Checking x265 installation ==="
+          ls -la $INSTALL_DIR/lib/pkgconfig/
+          cat $INSTALL_DIR/lib/pkgconfig/x265.pc || echo "x265.pc not found"
+        env:
+          PKG_CONFIG_PATH: ${{ github.workspace }}/ffmpeg_install/lib/pkgconfig
 
       - name: Build libvpx
         run: |
@@ -77,6 +87,8 @@ jobs:
                       --disable-tools
           make -j$(sysctl -n hw.ncpu)
           make install
+        env:
+          PKG_CONFIG_PATH: ${{ github.workspace }}/ffmpeg_install/lib/pkgconfig
 
       - name: Build libaom (AV1)
         run: |
@@ -91,6 +103,8 @@ jobs:
                 ..
           make -j$(sysctl -n hw.ncpu)
           make install
+        env:
+          PKG_CONFIG_PATH: ${{ github.workspace }}/ffmpeg_install/lib/pkgconfig
 
       - name: Build libopus
         run: |
@@ -104,11 +118,26 @@ jobs:
                       --with-pic
           make -j$(sysctl -n hw.ncpu)
           make install
+        env:
+          PKG_CONFIG_PATH: ${{ github.workspace }}/ffmpeg_install/lib/pkgconfig
 
       - name: Build FFmpeg
         run: |
           cd $BUILD_DIR
-          git clone --depth 1 --branch ${{ inputs.ffmpeg_version || 'master' }} https://git.ffmpeg.org/ffmpeg.git ffmpeg
+          
+          # Debug: List installed pkg-config files
+          echo "=== Installed pkg-config files ==="
+          ls -la $INSTALL_DIR/lib/pkgconfig/
+          
+          # Debug: Verify libraries are found
+          echo "=== Testing pkg-config ==="
+          pkg-config --exists x264 && echo "x264 found" || echo "x264 NOT found"
+          pkg-config --exists x265 && echo "x265 found" || echo "x265 NOT found"
+          pkg-config --exists vpx && echo "vpx found" || echo "vpx NOT found"
+          pkg-config --exists aom && echo "aom found" || echo "aom NOT found"
+          pkg-config --exists opus && echo "opus found" || echo "opus NOT found"
+          
+          git clone --depth 1 --branch ${{ env.FFMPEG_VERSION }} https://git.ffmpeg.org/ffmpeg.git ffmpeg
           cd ffmpeg
           ./configure --prefix=$INSTALL_DIR \
                       --pkg-config-flags="--static" \
@@ -130,6 +159,10 @@ jobs:
                       --disable-autodetect
           make -j$(sysctl -n hw.ncpu)
           make install
+        env:
+          PKG_CONFIG_PATH: ${{ github.workspace }}/ffmpeg_install/lib/pkgconfig
+          LDFLAGS: -L${{ github.workspace }}/ffmpeg_install/lib
+          CFLAGS: -I${{ github.workspace }}/ffmpeg_install/include
 
       - name: Get FFmpeg version
         id: ffmpeg_version
@@ -141,12 +174,8 @@ jobs:
       - name: Package binaries
         run: |
           cd $INSTALL_DIR/bin
-          # Create minimal package with just ffmpeg and ffprobe
           tar -czvf ffmpeg-macos-arm64.tar.gz ffmpeg ffprobe
-          
-          # Generate checksum
           shasum -a 256 ffmpeg-macos-arm64.tar.gz > ffmpeg-macos-arm64.tar.gz.sha256
-          
           mv ffmpeg-macos-arm64.tar.gz ${{ github.workspace }}/
           mv ffmpeg-macos-arm64.tar.gz.sha256 ${{ github.workspace }}/
 
@@ -159,7 +188,11 @@ jobs:
             ffmpeg-macos-arm64.tar.gz.sha256
 
   build-macos-intel:
-    runs-on: macos-15  # Intel runner
+    runs-on: macos-13  # Intel runner (macos-15 is also Apple Silicon)
+    
+    env:
+      BUILD_DIR: ${{ github.workspace }}/ffmpeg_build
+      INSTALL_DIR: ${{ github.workspace }}/ffmpeg_install
     
     steps:
       - name: Checkout repository
@@ -167,15 +200,9 @@ jobs:
 
       - name: Setup build environment
         run: |
-          mkdir -p ${{ github.workspace }}/ffmpeg_build
-          mkdir -p ${{ github.workspace }}/ffmpeg_install
-          
-          echo "BUILD_DIR=${{ github.workspace }}/ffmpeg_build" >> $GITHUB_ENV
-          echo "INSTALL_DIR=${{ github.workspace }}/ffmpeg_install" >> $GITHUB_ENV
-          echo "PATH=${{ github.workspace }}/ffmpeg_install/bin:$PATH" >> $GITHUB_ENV
-          echo "PKG_CONFIG_PATH=${{ github.workspace }}/ffmpeg_install/lib/pkgconfig" >> $GITHUB_ENV
-          echo "LDFLAGS=-L${{ github.workspace }}/ffmpeg_install/lib" >> $GITHUB_ENV
-          echo "CFLAGS=-I${{ github.workspace }}/ffmpeg_install/include" >> $GITHUB_ENV
+          mkdir -p $BUILD_DIR
+          mkdir -p $INSTALL_DIR
+          mkdir -p $INSTALL_DIR/lib/pkgconfig
 
       - name: Install build tools
         run: |
@@ -193,6 +220,8 @@ jobs:
                       --enable-pic
           make -j$(sysctl -n hw.ncpu)
           make install
+        env:
+          PKG_CONFIG_PATH: ${{ github.workspace }}/ffmpeg_install/lib/pkgconfig
 
       - name: Build x265
         run: |
@@ -207,6 +236,13 @@ jobs:
                 ../source
           make -j$(sysctl -n hw.ncpu)
           make install
+          
+          # Verify x265 was installed correctly
+          echo "=== Checking x265 installation ==="
+          ls -la $INSTALL_DIR/lib/pkgconfig/
+          cat $INSTALL_DIR/lib/pkgconfig/x265.pc || echo "x265.pc not found"
+        env:
+          PKG_CONFIG_PATH: ${{ github.workspace }}/ffmpeg_install/lib/pkgconfig
 
       - name: Build libvpx
         run: |
@@ -222,6 +258,8 @@ jobs:
                       --disable-tools
           make -j$(sysctl -n hw.ncpu)
           make install
+        env:
+          PKG_CONFIG_PATH: ${{ github.workspace }}/ffmpeg_install/lib/pkgconfig
 
       - name: Build libaom (AV1)
         run: |
@@ -236,6 +274,8 @@ jobs:
                 ..
           make -j$(sysctl -n hw.ncpu)
           make install
+        env:
+          PKG_CONFIG_PATH: ${{ github.workspace }}/ffmpeg_install/lib/pkgconfig
 
       - name: Build libopus
         run: |
@@ -249,11 +289,26 @@ jobs:
                       --with-pic
           make -j$(sysctl -n hw.ncpu)
           make install
+        env:
+          PKG_CONFIG_PATH: ${{ github.workspace }}/ffmpeg_install/lib/pkgconfig
 
       - name: Build FFmpeg
         run: |
           cd $BUILD_DIR
-          git clone --depth 1 --branch ${{ inputs.ffmpeg_version || 'master' }} https://git.ffmpeg.org/ffmpeg.git ffmpeg
+          
+          # Debug: List installed pkg-config files
+          echo "=== Installed pkg-config files ==="
+          ls -la $INSTALL_DIR/lib/pkgconfig/
+          
+          # Debug: Verify libraries are found
+          echo "=== Testing pkg-config ==="
+          pkg-config --exists x264 && echo "x264 found" || echo "x264 NOT found"
+          pkg-config --exists x265 && echo "x265 found" || echo "x265 NOT found"
+          pkg-config --exists vpx && echo "vpx found" || echo "vpx NOT found"
+          pkg-config --exists aom && echo "aom found" || echo "aom NOT found"
+          pkg-config --exists opus && echo "opus found" || echo "opus NOT found"
+          
+          git clone --depth 1 --branch ${{ env.FFMPEG_VERSION }} https://git.ffmpeg.org/ffmpeg.git ffmpeg
           cd ffmpeg
           ./configure --prefix=$INSTALL_DIR \
                       --pkg-config-flags="--static" \
@@ -275,6 +330,10 @@ jobs:
                       --disable-autodetect
           make -j$(sysctl -n hw.ncpu)
           make install
+        env:
+          PKG_CONFIG_PATH: ${{ github.workspace }}/ffmpeg_install/lib/pkgconfig
+          LDFLAGS: -L${{ github.workspace }}/ffmpeg_install/lib
+          CFLAGS: -I${{ github.workspace }}/ffmpeg_install/include
 
       - name: Package binaries
         run: |
