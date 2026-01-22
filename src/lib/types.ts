@@ -201,6 +201,7 @@ export interface AIConfig {
   proxy_url?: string; // Custom OpenAI-compatible API endpoint
   summary_style: SummaryStyle;
   summary_language: string;
+  timeout_seconds?: number; // Timeout for AI generation (default 120s)
 }
 
 export interface ModelOption {

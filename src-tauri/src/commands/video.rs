@@ -5,21 +5,34 @@ use tauri_plugin_shell::ShellExt;
 use tauri_plugin_shell::process::CommandEvent;
 use tokio::process::Command;
 use tokio::time::timeout;
+use uuid::Uuid;
 use crate::types::{VideoInfo, FormatOption, VideoInfoResponse, PlaylistVideoEntry, SubtitleInfo};
 use crate::services::run_ytdlp_json;
 
 /// Get video transcript/subtitles for AI summarization
 #[tauri::command]
 pub async fn get_video_transcript(app: AppHandle, url: String) -> Result<String, String> {
-    // Create temp directory for subtitle files
-    let temp_dir = std::env::temp_dir().join(format!("youwee_subs_{}", std::process::id()));
-    std::fs::create_dir_all(&temp_dir).ok();
+    // Log the URL being processed (for debugging)
+    #[cfg(debug_assertions)]
+    println!("[TRANSCRIPT] Fetching transcript for URL: {}", &url);
+    
+    // Create unique temp directory for this request (using UUID to prevent any contamination)
+    let request_id = Uuid::new_v4();
+    let temp_dir = std::env::temp_dir().join(format!("youwee_subs_{}", request_id));
+    
+    if let Err(e) = std::fs::create_dir_all(&temp_dir) {
+        return Err(format!("Failed to create temp directory: {}", e));
+    }
     
     let temp_path = temp_dir.join("transcript");
     let temp_path_str = temp_path.to_string_lossy().to_string();
     
+    // Clone URL for use in args (ensure we're using the correct URL)
+    let url_for_subs = url.clone();
+    let url_for_info = url.clone();
+    
     // Try to download subtitles with timeout (30 seconds)
-    let subtitle_args = [
+    let subtitle_args = vec![
         "--skip-download",
         "--write-auto-subs",
         "--write-subs",
@@ -28,14 +41,18 @@ pub async fn get_video_transcript(app: AppHandle, url: String) -> Result<String,
         "-o", &temp_path_str,
         "--no-warnings",
         "--no-check-certificates",
+        "--no-cache-dir",  // Prevent yt-dlp from using cached data
         "--socket-timeout", "15",
-        &url,
+        &url_for_subs,
     ];
+    
+    #[cfg(debug_assertions)]
+    println!("[TRANSCRIPT] Running yt-dlp for subtitles...");
     
     // Run with timeout
     let subtitle_result = timeout(
         Duration::from_secs(30),
-        run_ytdlp_json(&app, &subtitle_args)
+        run_ytdlp_json(&app, &subtitle_args.iter().map(|s| *s).collect::<Vec<_>>())
     ).await;
     
     // Check for downloaded subtitle files
@@ -52,6 +69,12 @@ pub async fn get_video_transcript(app: AppHandle, url: String) -> Result<String,
                 }
             }
         }
+        
+        #[cfg(debug_assertions)]
+        println!("[TRANSCRIPT] Found {} subtitle files", subtitle_files.len());
+    } else {
+        #[cfg(debug_assertions)]
+        println!("[TRANSCRIPT] Subtitle fetch timed out or failed");
     }
     
     // Sort files: prefer English and shorter names (manual subs)
@@ -77,10 +100,10 @@ pub async fn get_video_transcript(app: AppHandle, url: String) -> Result<String,
         if let Ok(content) = std::fs::read_to_string(path) {
             let transcript = parse_subtitle_file(&content);
             if !transcript.trim().is_empty() && transcript.split_whitespace().count() > 10 {
+                #[cfg(debug_assertions)]
+                println!("[TRANSCRIPT] Successfully parsed subtitles ({} words)", transcript.split_whitespace().count());
+                
                 // Clean up
-                for p in &subtitle_files {
-                    std::fs::remove_file(p).ok();
-                }
                 std::fs::remove_dir_all(&temp_dir).ok();
                 return Ok(transcript);
             }
@@ -90,18 +113,22 @@ pub async fn get_video_transcript(app: AppHandle, url: String) -> Result<String,
     // Clean up subtitle files
     std::fs::remove_dir_all(&temp_dir).ok();
     
+    #[cfg(debug_assertions)]
+    println!("[TRANSCRIPT] No subtitles found, trying description fallback for URL: {}", &url_for_info);
+    
     // No subtitles found - try to get title and description as fallback
-    let info_args = [
+    let info_args = vec![
         "--skip-download",
         "--print", "%(title)s|||%(description)s",
         "--no-warnings",
+        "--no-cache-dir",  // Prevent yt-dlp from using cached data
         "--socket-timeout", "10",
-        &url,
+        &url_for_info,
     ];
     
     let info_result = timeout(
         Duration::from_secs(15),
-        run_ytdlp_json(&app, &info_args)
+        run_ytdlp_json(&app, &info_args.iter().map(|s| *s).collect::<Vec<_>>())
     ).await;
     
     if let Ok(Ok(info_str)) = info_result {
@@ -109,12 +136,24 @@ pub async fn get_video_transcript(app: AppHandle, url: String) -> Result<String,
         let title = parts.first().map(|s| s.trim()).unwrap_or("");
         let description = parts.get(1).map(|s| s.trim()).unwrap_or("");
         
+        #[cfg(debug_assertions)]
+        println!("[TRANSCRIPT] Got title: '{}', description length: {}", title, description.len());
+        
         if !description.is_empty() && description.len() > 50 {
             // Check if description seems to contain actual content (not just promo/links)
             if is_description_content_relevant(title, description) {
+                #[cfg(debug_assertions)]
+                println!("[TRANSCRIPT] Description is relevant, using as fallback");
+                
                 return Ok(format!("[Video Description - No subtitles available]\nTitle: {}\n\n{}", title, description));
+            } else {
+                #[cfg(debug_assertions)]
+                println!("[TRANSCRIPT] Description not relevant (promotional content)");
             }
         }
+    } else {
+        #[cfg(debug_assertions)]
+        println!("[TRANSCRIPT] Description fetch failed or timed out");
     }
     
     Err("No transcript available. This video has no subtitles, auto-generated captions, or meaningful description to summarize.".to_string())

@@ -81,6 +81,12 @@ export function HistoryItem({ entry }: HistoryItemProps) {
 
   const sourceConfig = getSourceConfig(entry.source);
   
+  // Reset local summary when entry changes (important for component reuse)
+  useEffect(() => {
+    setLocalSummary(entry.summary);
+    setShowFullSummary(false);
+  }, [entry.id, entry.summary]);
+  
   // Get background task status from context
   const task = ai.getSummaryTask(entry.id);
   const isGeneratingSummary = task?.status === 'fetching' || task?.status === 'generating';
