@@ -561,26 +561,37 @@ export function SettingsPage() {
                 )}
 
                 {/* Model Selection */}
-                <div className="flex items-center justify-between py-2">
-                  <div>
-                    <p className="text-sm font-medium">Model</p>
-                    <p className="text-xs text-muted-foreground">AI model for summarization</p>
+                <div className="space-y-2 py-2">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium">Model</p>
+                      <p className="text-xs text-muted-foreground">Select or type custom model name</p>
+                    </div>
                   </div>
-                  <Select
-                    value={ai.config.model}
-                    onValueChange={(v) => ai.updateConfig({ model: v })}
-                  >
-                    <SelectTrigger className="w-[180px] h-9">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {ai.models.map((m) => (
-                        <SelectItem key={m.value} value={m.value}>
-                          {m.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <div className="flex gap-2">
+                    <Input
+                      type="text"
+                      value={ai.config.model}
+                      onChange={(e) => ai.updateConfig({ model: e.target.value })}
+                      placeholder="Enter model name..."
+                      className="h-9 flex-1"
+                    />
+                    <Select
+                      value={ai.models.some(m => m.value === ai.config.model) ? ai.config.model : ''}
+                      onValueChange={(v) => ai.updateConfig({ model: v })}
+                    >
+                      <SelectTrigger className="w-[180px] h-9">
+                        <SelectValue placeholder="Quick select..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {ai.models.map((m) => (
+                          <SelectItem key={m.value} value={m.value}>
+                            {m.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
 
                 {/* Summary Style */}
