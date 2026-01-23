@@ -52,7 +52,7 @@ const defaultConfig: AIConfig = {
   model: 'gemini-2.0-flash',
   ollama_url: 'http://localhost:11434',
   proxy_url: 'https://api.openai.com',
-  summary_style: 'detailed',
+  summary_style: 'concise',
   summary_language: 'auto',
   timeout_seconds: 120,
   transcript_languages: ['en'],

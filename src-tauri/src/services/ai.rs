@@ -22,12 +22,13 @@ impl Default for AIProvider {
 #[serde(rename_all = "lowercase")]
 pub enum SummaryStyle {
     Short,    // 2-3 sentences
-    Detailed, // Bullet points with key information
+    Concise,  // Balanced summary with key points
+    Detailed, // Comprehensive bullet points with all details
 }
 
 impl Default for SummaryStyle {
     fn default() -> Self {
-        SummaryStyle::Detailed
+        SummaryStyle::Concise
     }
 }
 
@@ -103,8 +104,18 @@ impl From<AIError> for String {
 /// Build prompt based on style and language
 fn build_prompt(transcript: &str, style: &SummaryStyle, language: &str) -> String {
     let style_instruction = match style {
-        SummaryStyle::Short => "Provide a concise summary in 2-3 sentences.",
-        SummaryStyle::Detailed => "Provide a detailed summary with bullet points covering the main topics and key takeaways.",
+        SummaryStyle::Short => "Provide a concise summary in 2-3 sentences capturing the main idea.",
+        SummaryStyle::Concise => r#"Summarize this video in a clear, structured format:
+1. Start with a one-sentence overview of what the video is about
+2. List 3-5 key points or takeaways using bullet points
+3. Keep each bullet point to 1-2 sentences maximum
+Be informative but concise. Focus on the most valuable insights."#,
+        SummaryStyle::Detailed => r#"Provide a comprehensive summary of this video:
+1. Begin with a brief introduction (2-3 sentences) explaining the video's purpose and context
+2. Break down ALL major topics discussed using organized bullet points with sub-points where needed
+3. Include specific details, examples, statistics, or quotes mentioned
+4. End with key conclusions or action items if applicable
+Be thorough and capture all important information."#,
     };
     
     let language_instruction = if language == "auto" {

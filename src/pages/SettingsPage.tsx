@@ -633,7 +633,8 @@ export function SettingsPage() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="short">Short (2-3 sentences)</SelectItem>
-                      <SelectItem value="detailed">Detailed (bullet points)</SelectItem>
+                      <SelectItem value="concise">Concise (key points)</SelectItem>
+                      <SelectItem value="detailed">Detailed (comprehensive)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

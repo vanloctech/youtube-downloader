@@ -190,7 +190,7 @@ export type HistorySort = 'recent' | 'oldest' | 'title' | 'size';
 
 // AI types
 export type AIProvider = 'gemini' | 'openai' | 'ollama' | 'proxy';
-export type SummaryStyle = 'short' | 'detailed';
+export type SummaryStyle = 'short' | 'concise' | 'detailed';
 
 export interface AIConfig {
   enabled: boolean;

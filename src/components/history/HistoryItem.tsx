@@ -76,6 +76,7 @@ export function HistoryItem({ entry }: HistoryItemProps) {
   const [isRedownloading, setIsRedownloading] = useState(false);
   const [redownloadError, setRedownloadError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [copiedSummary, setCopiedSummary] = useState(false);
   const [localSummary, setLocalSummary] = useState<string | undefined>(entry.summary);
   const [showFullSummary, setShowFullSummary] = useState(false);
 
@@ -139,6 +140,14 @@ export function HistoryItem({ entry }: HistoryItemProps) {
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   }, [entry.url]);
+
+  const handleCopySummary = useCallback(() => {
+    if (localSummary) {
+      navigator.clipboard.writeText(localSummary);
+      setCopiedSummary(true);
+      setTimeout(() => setCopiedSummary(false), 2000);
+    }
+  }, [localSummary]);
 
   const handleGenerateSummary = useCallback(() => {
     // Check if AI is enabled - if not, start task anyway to show error
@@ -237,11 +246,11 @@ export function HistoryItem({ entry }: HistoryItemProps) {
                         <div className="flex-1 min-w-0">
                           <div 
                             className="text-xs text-muted-foreground overflow-hidden"
-                            style={!showFullSummary ? { maxHeight: '4.5em' } : undefined}
+                            style={!showFullSummary ? { maxHeight: '7.5em' } : undefined}
                           >
                             <SimpleMarkdown content={localSummary} />
                           </div>
-                          {localSummary.length > 150 && (
+                          {localSummary.length > 200 && (
                             <button
                               onClick={() => setShowFullSummary(!showFullSummary)}
                               className="text-xs text-purple-500 hover:text-purple-400 mt-1 flex items-center gap-0.5"
@@ -254,18 +263,31 @@ export function HistoryItem({ entry }: HistoryItemProps) {
                             </button>
                           )}
                         </div>
-                        <button
-                          onClick={handleGenerateSummary}
-                          disabled={isGeneratingSummary}
-                          className="p-1 rounded text-muted-foreground hover:text-purple-500 transition-colors flex-shrink-0"
-                          title="Regenerate summary"
-                        >
-                          {isGeneratingSummary ? (
-                            <Loader2 className="w-3 h-3 animate-spin" />
-                          ) : (
-                            <RefreshCw className="w-3 h-3" />
-                          )}
-                        </button>
+                        <div className="flex flex-col gap-1 flex-shrink-0">
+                          <button
+                            onClick={handleCopySummary}
+                            className="p-1 rounded text-muted-foreground hover:text-purple-500 transition-colors"
+                            title="Copy summary"
+                          >
+                            {copiedSummary ? (
+                              <Check className="w-3 h-3 text-green-500" />
+                            ) : (
+                              <Copy className="w-3 h-3" />
+                            )}
+                          </button>
+                          <button
+                            onClick={handleGenerateSummary}
+                            disabled={isGeneratingSummary}
+                            className="p-1 rounded text-muted-foreground hover:text-purple-500 transition-colors"
+                            title="Regenerate summary"
+                          >
+                            {isGeneratingSummary ? (
+                              <Loader2 className="w-3 h-3 animate-spin" />
+                            ) : (
+                              <RefreshCw className="w-3 h-3" />
+                            )}
+                          </button>
+                        </div>
                       </div>
                     </div>
                 ) : (
