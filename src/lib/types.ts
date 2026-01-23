@@ -202,7 +202,28 @@ export interface AIConfig {
   summary_style: SummaryStyle;
   summary_language: string;
   timeout_seconds?: number; // Timeout for AI generation (default 120s)
+  transcript_languages?: string[]; // Languages to try for transcript extraction (order matters)
 }
+
+// Available languages (shared between transcript extraction and summary output)
+export const LANGUAGE_OPTIONS = [
+  { code: 'en', name: 'English' },
+  { code: 'vi', name: 'Vietnamese' },
+  { code: 'ja', name: 'Japanese' },
+  { code: 'ko', name: 'Korean' },
+  { code: 'zh-Hans', name: 'Chinese (Simplified)' },
+  { code: 'zh-Hant', name: 'Chinese (Traditional)' },
+  { code: 'th', name: 'Thai' },
+  { code: 'id', name: 'Indonesian' },
+  { code: 'es', name: 'Spanish' },
+  { code: 'fr', name: 'French' },
+  { code: 'de', name: 'German' },
+  { code: 'pt', name: 'Portuguese' },
+  { code: 'ru', name: 'Russian' },
+] as const;
+
+// Default transcript languages order
+export const DEFAULT_TRANSCRIPT_LANGUAGES = ['en'];
 
 export interface ModelOption {
   value: string;

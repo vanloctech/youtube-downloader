@@ -12,7 +12,7 @@ use crate::database::add_log_internal;
 
 /// Get video transcript/subtitles for AI summarization
 #[tauri::command]
-pub async fn get_video_transcript(app: AppHandle, url: String) -> Result<String, String> {
+pub async fn get_video_transcript(app: AppHandle, url: String, languages: Option<Vec<String>>) -> Result<String, String> {
     // Log the URL being processed
     #[cfg(debug_assertions)]
     println!("[TRANSCRIPT] Fetching transcript for URL: {}", &url);
@@ -36,92 +36,113 @@ pub async fn get_video_transcript(app: AppHandle, url: String) -> Result<String,
     let url_for_subs = url.clone();
     let url_for_info = url.clone();
     
-    // Try to download subtitles with timeout (60 seconds - increased from 30)
-    let subtitle_args = vec![
-        "--skip-download",
-        "--write-auto-subs",
-        "--write-subs",
-        "--sub-langs", "en.*,vi.*,ja.*,ko.*,zh.*,es.*,fr.*,de.*,pt.*,ru.*",
-        "--convert-subs", "vtt",
-        "-o", &temp_path_str,
-        "--no-warnings",
-        "--no-check-certificates",
-        "--no-cache-dir",
-        "--socket-timeout", "30",  // Increased from 15
-        &url_for_subs,
-    ];
+    // Use provided languages or default
+    let lang_list: Vec<String> = languages.unwrap_or_else(|| {
+        vec!["en".to_string()]
+    });
     
     #[cfg(debug_assertions)]
-    println!("[TRANSCRIPT] Running yt-dlp for subtitles...");
+    println!("[TRANSCRIPT] Languages to try: {:?}", lang_list);
     
-    let subtitle_cmd = format!("yt-dlp {}", subtitle_args.join(" "));
-    add_log_internal("command", &subtitle_cmd, None, Some(&url)).ok();
-    
-    // Run with timeout (60 seconds) - use run_ytdlp_with_stderr to capture errors
-    let subtitle_result = timeout(
-        Duration::from_secs(60),
-        run_ytdlp_with_stderr(&app, &subtitle_args.iter().map(|s| *s).collect::<Vec<_>>())
-    ).await;
+    add_log_internal("info", &format!("Trying languages: {}", lang_list.join(", ")), None, Some(&url)).ok();
     
     // Track if we hit a rate limit error
     let mut rate_limited = false;
     let mut specific_error: Option<String> = None;
-    
-    // Check for downloaded subtitle files
     let mut subtitle_files: Vec<std::path::PathBuf> = Vec::new();
     
-    match &subtitle_result {
-        Ok(Ok(output)) => {
-            // Check stderr for errors
-            if !output.stderr.is_empty() {
-                #[cfg(debug_assertions)]
-                println!("[TRANSCRIPT] yt-dlp stderr: {}", output.stderr.trim());
-                
-                // Parse for known errors
-                if let Some(error_msg) = parse_ytdlp_error(&output.stderr) {
-                    add_log_internal("stderr", &error_msg, None, Some(&url)).ok();
-                    specific_error = Some(error_msg.clone());
+    for (idx, lang) in lang_list.iter().enumerate() {
+        #[cfg(debug_assertions)]
+        println!("[TRANSCRIPT] Trying language: {} ({}/{})", lang, idx + 1, lang_list.len());
+        
+        let subtitle_args = vec![
+            "--skip-download",
+            "--no-playlist",  // Important: only get single video, not playlist
+            "--write-auto-subs",
+            "--write-subs",
+            "--sub-langs", lang.as_str(),
+            "--convert-subs", "vtt",
+            "-o", &temp_path_str,
+            "--no-warnings",
+            "--no-check-certificates",
+            "--no-cache-dir",
+            "--socket-timeout", "30",
+            &url_for_subs,
+        ];
+        
+        if idx == 0 {
+            let subtitle_cmd = format!("yt-dlp {}", subtitle_args.join(" "));
+            add_log_internal("command", &subtitle_cmd, None, Some(&url)).ok();
+        }
+        
+        let subtitle_result = timeout(
+            Duration::from_secs(45),
+            run_ytdlp_with_stderr(&app, &subtitle_args.iter().map(|s| *s).collect::<Vec<_>>())
+        ).await;
+        
+        match &subtitle_result {
+            Ok(Ok(output)) => {
+                // Check stderr for errors
+                if !output.stderr.is_empty() {
+                    #[cfg(debug_assertions)]
+                    println!("[TRANSCRIPT] yt-dlp stderr for {}: {}", lang, output.stderr.trim());
                     
                     if output.stderr.to_lowercase().contains("429") {
                         rate_limited = true;
+                        add_log_internal("stderr", &format!("Rate limited on language: {}", lang), None, Some(&url)).ok();
+                        // Wait a bit before trying next language
+                        tokio::time::sleep(Duration::from_secs(2)).await;
+                        continue;
                     }
-                }
-            }
-            
-            // Even with errors, check if any files were downloaded
-            if let Ok(entries) = std::fs::read_dir(&temp_dir) {
-                for entry in entries.flatten() {
-                    let path = entry.path();
-                    if let Some(ext) = path.extension() {
-                        if ext == "vtt" || ext == "srt" {
-                            subtitle_files.push(path);
+                    
+                    // Parse for known errors
+                    if let Some(error_msg) = parse_ytdlp_error(&output.stderr) {
+                        if specific_error.is_none() {
+                            specific_error = Some(error_msg.clone());
                         }
                     }
                 }
-            }
-            
-            #[cfg(debug_assertions)]
-            println!("[TRANSCRIPT] Found {} subtitle files", subtitle_files.len());
-            
-            if subtitle_files.is_empty() {
-                if specific_error.is_none() {
-                    add_log_internal("info", "No subtitle files found", None, Some(&url)).ok();
+                
+                // Check if any subtitle files were downloaded
+                if let Ok(entries) = std::fs::read_dir(&temp_dir) {
+                    for entry in entries.flatten() {
+                        let path = entry.path();
+                        if let Some(ext) = path.extension() {
+                            if ext == "vtt" || ext == "srt" {
+                                if !subtitle_files.contains(&path) {
+                                    subtitle_files.push(path);
+                                }
+                            }
+                        }
+                    }
                 }
-            } else {
-                add_log_internal("info", &format!("Found {} subtitle files", subtitle_files.len()), None, Some(&url)).ok();
+                
+                // If we got subtitles, stop trying more languages
+                if !subtitle_files.is_empty() {
+                    #[cfg(debug_assertions)]
+                    println!("[TRANSCRIPT] Found {} subtitle files for language: {}", subtitle_files.len(), lang);
+                    add_log_internal("info", &format!("Found subtitles for language: {}", lang), None, Some(&url)).ok();
+                    break;
+                }
+            }
+            Ok(Err(e)) => {
+                #[cfg(debug_assertions)]
+                println!("[TRANSCRIPT] Subtitle fetch failed for {}: {}", lang, e);
+            }
+            Err(_) => {
+                #[cfg(debug_assertions)]
+                println!("[TRANSCRIPT] Subtitle fetch timed out for {}", lang);
             }
         }
-        Ok(Err(e)) => {
-            #[cfg(debug_assertions)]
-            println!("[TRANSCRIPT] Subtitle fetch failed: {}", e);
-            add_log_internal("stderr", &format!("Subtitle fetch failed: {}", e), None, Some(&url)).ok();
-        }
-        Err(_) => {
-            #[cfg(debug_assertions)]
-            println!("[TRANSCRIPT] Subtitle fetch timed out");
-            add_log_internal("stderr", "Subtitle fetch timed out (60s)", None, Some(&url)).ok();
+        
+        // Small delay between language attempts to be nice to YouTube
+        if idx < lang_list.len() - 1 {
+            tokio::time::sleep(Duration::from_millis(500)).await;
         }
     }
+    
+    #[cfg(debug_assertions)]
+    println!("[TRANSCRIPT] Total subtitle files found: {}", subtitle_files.len());
     
     // Sort files: prefer English and shorter names (manual subs)
     subtitle_files.sort_by(|a, b| {
@@ -167,13 +188,17 @@ pub async fn get_video_transcript(app: AppHandle, url: String) -> Result<String,
     
     add_log_internal("info", "No subtitles available, trying description fallback", None, Some(&url)).ok();
     
-    // No subtitles found - try to get title and description as fallback (increased timeout to 45s)
+    // Small delay before next request to avoid rate limiting
+    tokio::time::sleep(Duration::from_secs(2)).await;
+    
+    // No subtitles found - try to get title and description as fallback
     let info_args = vec![
         "--skip-download",
+        "--no-playlist",  // Important: only get single video, not playlist
         "--print", "%(title)s|||%(description)s",
         "--no-warnings",
         "--no-cache-dir",
-        "--socket-timeout", "30",  // Increased from 10
+        "--socket-timeout", "30",
         &url_for_info,
     ];
     

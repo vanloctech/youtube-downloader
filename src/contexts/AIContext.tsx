@@ -45,6 +45,7 @@ const defaultConfig: AIConfig = {
   summary_style: 'short',
   summary_language: 'auto',
   timeout_seconds: 120,
+  transcript_languages: ['en'],
 };
 
 const AIContext = createContext<AIContextValue | undefined>(undefined);
@@ -144,8 +145,9 @@ export function AIProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const fetchTranscript = useCallback(async (url: string): Promise<string> => {
-    return await invoke<string>('get_video_transcript', { url });
-  }, []);
+    const languages = config.transcript_languages || ['en'];
+    return await invoke<string>('get_video_transcript', { url, languages });
+  }, [config.transcript_languages]);
 
   // Background task management
   const updateTask = useCallback((historyId: string, update: Partial<SummaryTask>) => {
@@ -180,14 +182,17 @@ export function AIProvider({ children }: { children: ReactNode }) {
       return newMap;
     });
     
+    // Get languages from current config
+    const languages = config.transcript_languages || ['en'];
+    
     // Run in background (not awaited, fire-and-forget)
     (async () => {
       try {
         // Fetch transcript
         if (import.meta.env.DEV) {
-          console.log(`[AI] Fetching transcript for URL: ${url}`);
+          console.log(`[AI] Fetching transcript for URL: ${url}, languages: ${languages.join(', ')}`);
         }
-        const transcript = await invoke<string>('get_video_transcript', { url });
+        const transcript = await invoke<string>('get_video_transcript', { url, languages });
         
         if (import.meta.env.DEV) {
           console.log(`[AI] Got transcript (${transcript.length} chars), first 200:`, transcript.slice(0, 200));
@@ -216,7 +221,7 @@ export function AIProvider({ children }: { children: ReactNode }) {
         activeTasksRef.current.delete(historyId);
       }
     })();
-  }, [updateTask]);
+  }, [updateTask, config.transcript_languages]);
 
   const getSummaryTask = useCallback((historyId: string): SummaryTask | undefined => {
     return summaryTasks.get(historyId);
