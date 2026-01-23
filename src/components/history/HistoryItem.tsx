@@ -226,29 +226,29 @@ export function HistoryItem({ entry }: HistoryItemProps) {
             {/* AI Summary */}
             {ai.config.enabled && (
               <div className="mt-2">
-                {localSummary ? (
-                  <div className="p-2 rounded-lg bg-purple-500/5 border border-purple-500/10">
-                    <div className="flex items-start gap-2">
-                      <Sparkles className="w-3.5 h-3.5 text-purple-500 flex-shrink-0 mt-0.5" />
-                      <div className="flex-1 min-w-0">
-                        <div className={cn(
-                          "text-xs text-muted-foreground",
-                          !showFullSummary && "line-clamp-3"
-                        )}>
-                          <SimpleMarkdown content={localSummary} />
-                        </div>
-                        {localSummary.length > 200 && (
-                          <button
-                            onClick={() => setShowFullSummary(!showFullSummary)}
-                            className="text-xs text-purple-500 hover:text-purple-400 mt-1 flex items-center gap-0.5"
+                  {localSummary ? (
+                    <div className="p-2 rounded-lg bg-purple-500/5 border border-purple-500/10">
+                      <div className="flex items-start gap-2">
+                        <Sparkles className="w-3.5 h-3.5 text-purple-500 flex-shrink-0 mt-0.5" />
+                        <div className="flex-1 min-w-0">
+                          <div 
+                            className="text-xs text-muted-foreground overflow-hidden"
+                            style={!showFullSummary ? { maxHeight: '4.5em' } : undefined}
                           >
-                            {showFullSummary ? (
-                              <>Show less <ChevronUp className="w-3 h-3" /></>
-                            ) : (
-                              <>Show more <ChevronDown className="w-3 h-3" /></>
-                            )}
-                          </button>
-                        )}
+                            <SimpleMarkdown content={localSummary} />
+                          </div>
+                          {localSummary.length > 150 && (
+                            <button
+                              onClick={() => setShowFullSummary(!showFullSummary)}
+                              className="text-xs text-purple-500 hover:text-purple-400 mt-1 flex items-center gap-0.5"
+                            >
+                              {showFullSummary ? (
+                                <>Show less <ChevronUp className="w-3 h-3" /></>
+                              ) : (
+                                <>Show more <ChevronDown className="w-3 h-3" /></>
+                              )}
+                            </button>
+                          )}
                       </div>
                       <button
                         onClick={handleGenerateSummary}

@@ -9,6 +9,7 @@ import { useAI } from '@/contexts/AIContext';
 import { themes } from '@/lib/themes';
 import type { ThemeName } from '@/lib/themes';
 import type { AIProvider, SummaryStyle } from '@/lib/types';
+import { LANGUAGE_OPTIONS, DEFAULT_TRANSCRIPT_LANGUAGES } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { 
   Check, 
@@ -30,6 +31,9 @@ import {
   Eye,
   EyeOff,
   AlertCircle,
+  GripVertical,
+  Plus,
+  X,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -644,13 +648,14 @@ export function SettingsPage() {
                     value={ai.config.summary_language}
                     onValueChange={(v) => ai.updateConfig({ summary_language: v })}
                   >
-                    <SelectTrigger className="w-[160px] h-9">
+                    <SelectTrigger className="w-[180px] h-9">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {ai.languages.map((l) => (
-                        <SelectItem key={l.value} value={l.value}>
-                          {l.label}
+                      <SelectItem value="auto">Auto (Same as video)</SelectItem>
+                      {LANGUAGE_OPTIONS.map((l) => (
+                        <SelectItem key={l.code} value={l.code}>
+                          {l.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -678,6 +683,107 @@ export function SettingsPage() {
                       <SelectItem value="600">10 minutes</SelectItem>
                     </SelectContent>
                   </Select>
+                </div>
+
+                {/* Transcript Languages */}
+                <div className="space-y-3 py-2">
+                  <div>
+                    <p className="text-sm font-medium">Transcript Languages</p>
+                    <p className="text-xs text-muted-foreground">Languages to try when fetching subtitles (first match wins)</p>
+                  </div>
+                  
+                  {/* Selected languages */}
+                  <div className="space-y-1.5">
+                    {(() => {
+                      const currentLangs = ai.config.transcript_languages && ai.config.transcript_languages.length > 0 
+                        ? ai.config.transcript_languages 
+                        : DEFAULT_TRANSCRIPT_LANGUAGES;
+                      
+                      return currentLangs.map((code, index) => {
+                        const lang = LANGUAGE_OPTIONS.find(l => l.code === code);
+                        return (
+                          <div 
+                            key={code}
+                            className="flex items-center gap-2 p-2 rounded-lg bg-muted/50 group"
+                          >
+                            <div className="flex items-center gap-1.5 text-muted-foreground">
+                              <GripVertical className="w-4 h-4" />
+                              <span className="text-xs font-mono w-4">{index + 1}</span>
+                            </div>
+                            <span className="flex-1 text-sm">{lang?.name || code}</span>
+                            <code className="text-xs text-muted-foreground font-mono">{code}</code>
+                            {/* Move up/down buttons */}
+                            <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <button
+                                className="p-1 hover:bg-muted rounded disabled:opacity-30"
+                                disabled={index === 0}
+                                onClick={() => {
+                                  const langs = [...currentLangs];
+                                  [langs[index - 1], langs[index]] = [langs[index], langs[index - 1]];
+                                  ai.updateConfig({ transcript_languages: langs });
+                                }}
+                              >
+                                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" /></svg>
+                              </button>
+                              <button
+                                className="p-1 hover:bg-muted rounded disabled:opacity-30"
+                                disabled={index === currentLangs.length - 1}
+                                onClick={() => {
+                                  const langs = [...currentLangs];
+                                  [langs[index], langs[index + 1]] = [langs[index + 1], langs[index]];
+                                  ai.updateConfig({ transcript_languages: langs });
+                                }}
+                              >
+                                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                              </button>
+                            </div>
+                            <button
+                              className="p-1 hover:bg-destructive/20 hover:text-destructive rounded opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={() => {
+                                const langs = currentLangs.filter(l => l !== code);
+                                ai.updateConfig({ transcript_languages: langs.length > 0 ? langs : DEFAULT_TRANSCRIPT_LANGUAGES });
+                              }}
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        );
+                      });
+                    })()}
+                  </div>
+                  
+                  {/* Add language dropdown */}
+                  {(() => {
+                    const currentLangs = ai.config.transcript_languages || DEFAULT_TRANSCRIPT_LANGUAGES;
+                    const availableLangs = LANGUAGE_OPTIONS.filter(l => !currentLangs.includes(l.code));
+                    
+                    if (availableLangs.length === 0) return null;
+                    
+                    return (
+                      <Select
+                        value=""
+                        onValueChange={(code) => {
+                          if (code) {
+                            ai.updateConfig({ transcript_languages: [...currentLangs, code] });
+                          }
+                        }}
+                      >
+                        <SelectTrigger className="w-full h-9 text-muted-foreground">
+                          <div className="flex items-center gap-2">
+                            <Plus className="w-4 h-4" />
+                            <span>Add language...</span>
+                          </div>
+                        </SelectTrigger>
+                        <SelectContent>
+                          {availableLangs.map((lang) => (
+                            <SelectItem key={lang.code} value={lang.code}>
+                              {lang.name} ({lang.code})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    );
+                  })()}
                 </div>
               </div>
             )}
