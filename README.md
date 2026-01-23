@@ -15,18 +15,14 @@
 
 ## ✨ Features
 
-- **Batch Downloads** - Download multiple videos at once
-- **Playlist Support** - Download entire YouTube playlists
-- **Multiple Quality Options** - From 360p to 8K Ultra HD
-- **Subtitle Support** - Embed subtitles into videos or save as separate files
-- **Universal Downloads** - Support for 1800+ websites powered by yt-dlp
-- **Download History** - Track all your downloads in the Library
-- **Audio Extraction** - Extract audio in MP3, M4A, or Opus formats
-- **6 Beautiful Themes** - Midnight, Aurora, Sunset, Ocean, Forest, Candy
-- **Dark/Light Mode** - Choose your preferred appearance
-- **File Size Estimation** - Know the size before downloading
-- **Fast & Lightweight** - Built with Tauri for minimal resource usage
-- **Auto-Updates** - Stay up to date with the latest features
+- 🎬 **Video Downloads** — YouTube, TikTok, Facebook, Instagram, and 1800+ sites
+- 🤖 **AI Video Summary** — Summarize videos with Gemini, OpenAI, or Ollama
+- 📋 **Batch & Playlist** — Download multiple videos or entire playlists
+- 🎵 **Audio Extraction** — Extract audio in MP3, M4A, or Opus formats
+- 📝 **Subtitle Support** — Download or embed subtitles
+- 📚 **Download Library** — Track and manage all your downloads
+- 🎨 **6 Beautiful Themes** — Midnight, Aurora, Sunset, Ocean, Forest, Candy
+- ⚡ **Fast & Lightweight** — Built with Tauri for minimal resource usage
 
 ## 📸 Screenshots
 |                 Download                 |                     Setting                      |

@@ -7,23 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-01-24
+
 ### Added
 - AI-powered video summarization with support for Gemini, OpenAI, and Ollama (local)
 - Proxy AI provider for OpenAI-compatible APIs with custom domain (Azure, LiteLLM, OpenRouter)
-- Video transcript extraction from YouTube subtitles
-- AI settings in Settings page (provider, model, language, summary style)
-- Generate/regenerate summary button in Library for each download
+- Dedicated AI Summary page for quick video summarization without downloading
+- Configurable transcript languages with priority order
+- Video transcript extraction from YouTube subtitles (including auto-generated)
+- Concise summary style option (between Short and Detailed)
+- Summarize button in queue items to generate summary without downloading
+- YouTube Troubleshooting option for actual player.js version (fixes download issues)
+- Re-download with progress tracking in Library
+- Copy summary button in Library items
 
 ### Changed
 - Redesigned download settings with clear Video/Audio toggle for better UX
 - Merged App Updates section into About section in Settings for cleaner UI
+- macOS app icon now follows Apple guidelines with rounded corners and proper sizing (84.4%)
+- Improved About section with modern card layout and quick links
+- Re-download now updates existing history entry instead of creating new one
 
 ### Fixed
-- macOS app icon now follows Apple guidelines with rounded corners and proper padding
+- Re-download quality mapping (480p → 480, 1080p → 1080, etc.)
+- Re-download for summary-only entries now uses best quality and user's output path
+- FFmpeg check now defaults to false, properly requiring FFmpeg for best/2K+ quality
 - Improved Gemini API error handling with detailed error messages
-- Updated AI model lists to use stable versions (removed preview models)
 - Fixed transcript extraction to support YouTube auto-generated subtitles
 - Added video description as fallback when no subtitles available
+- Prevent transcript cross-contamination between videos
+- Show full yt-dlp command in logs instead of just args
 
 ## [0.3.2] - 2026-01-22
 
