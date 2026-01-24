@@ -17,8 +17,6 @@ import type {
   PlaylistVideoEntry,
   ItemDownloadSettings,
   CookieSettings,
-  CookieMode,
-  BrowserType,
 } from '@/lib/types';
 
 const STORAGE_KEY = 'youwee-settings';
