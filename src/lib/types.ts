@@ -242,6 +242,8 @@ export const LANGUAGE_OPTIONS = [
   { code: 'zh-Hant', name: 'Chinese (Traditional)' },
   { code: 'th', name: 'Thai' },
   { code: 'id', name: 'Indonesian' },
+  { code: 'hi', name: 'Hindi' },
+  { code: 'pt-BR', name: 'Portuguese (Brazil)' },
   { code: 'es', name: 'Spanish' },
   { code: 'fr', name: 'French' },
   { code: 'de', name: 'German' },
