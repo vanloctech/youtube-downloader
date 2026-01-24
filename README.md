@@ -13,24 +13,22 @@
 
 ---
 
-## ✨ Features
+## Features
 
-- 🎬 **Video Downloads** — YouTube, TikTok, Facebook, Instagram, and 1800+ sites
-- 🤖 **AI Video Summary** — Summarize videos with Gemini, OpenAI, or Ollama
-- 📋 **Batch & Playlist** — Download multiple videos or entire playlists
-- 🎵 **Audio Extraction** — Extract audio in MP3, M4A, or Opus formats
-- 📝 **Subtitle Support** — Download or embed subtitles
-- 📚 **Download Library** — Track and manage all your downloads
-- 🎨 **6 Beautiful Themes** — Midnight, Aurora, Sunset, Ocean, Forest, Candy
-- ⚡ **Fast & Lightweight** — Built with Tauri for minimal resource usage
+- **Video Downloads** — YouTube, TikTok, Facebook, Instagram, and 1800+ sites
+- **AI Video Summary** — Summarize videos with Gemini, OpenAI, or Ollama
+- **Batch & Playlist** — Download multiple videos or entire playlists
+- **Audio Extraction** — Extract audio in MP3, M4A, or Opus formats
+- **Subtitle Support** — Download or embed subtitles
+- **Download Library** — Track and manage all your downloads
+- **6 Beautiful Themes** — Midnight, Aurora, Sunset, Ocean, Forest, Candy
+- **Fast & Lightweight** — Built with Tauri for minimal resource usage
 
-## 📸 Screenshots
-|                 Download                 |                     Setting                      |
-|:----------------------------------------:|:------------------------------------------------:|
-| ![Youwee](docs/screenshots/youwee-1.png) | ![Youwee setting](docs/screenshots/youwee-3.png) |
+## Screenshots
+![Youwee](docs/screenshots/youwee-1.png)
 
 
-## 🚀 Installation
+## Installation
 
 ### Download for your platform
 
@@ -47,7 +45,7 @@
 
 #### Prerequisites
 
-- [Bun](https://bun.sh/) (v1.0 or later)
+- [Bun](https://bun.sh/) (v1.3.5 or later)
 - [Rust](https://www.rust-lang.org/) (v1.70 or later)
 - [Tauri CLI](https://tauri.app/v1/guides/getting-started/prerequisites)
 
@@ -68,14 +66,14 @@ bun run tauri dev
 bun run tauri build
 ```
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 - **Frontend**: React 19, TypeScript, Tailwind CSS, shadcn/ui
 - **Backend**: Rust, Tauri 2.0
 - **Downloader**: yt-dlp (bundled)
 - **Build**: Bun, Vite
 
-## 🤝 Contributing
+## Contributing
 
 We welcome contributions! Here's how you can help:
 
@@ -112,11 +110,11 @@ We follow [Conventional Commits](https://www.conventionalcommits.org/):
 - Frontend changes reflect immediately
 - Rust changes require recompilation (automatic in dev mode)
 
-## 📄 License
+## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
 - [yt-dlp](https://github.com/yt-dlp/yt-dlp) - The powerful video downloader
 - [FFmpeg](https://ffmpeg.org/) - Multimedia framework for audio/video processing
@@ -125,7 +123,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - [shadcn/ui](https://ui.shadcn.com/) - Beautiful UI components
 - [Lucide Icons](https://lucide.dev/) - Beautiful open-source icons
 
-## 📬 Contact
+## Contact
 
 - **GitHub**: [@vanloctech](https://github.com/vanloctech)
 - **Issues**: [GitHub Issues](https://github.com/vanloctech/youwee/issues)

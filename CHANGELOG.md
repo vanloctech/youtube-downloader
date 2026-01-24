@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-01-24
+
+### Added
+- Video Authentication support for age-restricted, private, and members-only videos
+- Browser cookie extraction (Chrome, Firefox, Safari, Edge, Brave, Opera, Vivaldi)
+- Browser profile detection with display names
+- Cookie file support as alternative authentication method
+- macOS Full Disk Access guidance for browser cookie access
+- Hindi and Portuguese (Brazil) language options for summaries
+- Debug logging for Gemini API requests in dev mode
+
+### Changed
+- Updated OpenAI models to latest: GPT-5.2, GPT-5.1, GPT-5, GPT-4.1 series
+- Gemini API now uses x-goog-api-key header instead of query parameter
+- Thinking models (Gemini 2.5, 3) no longer use generationConfig restrictions
+- yt-dlp now uses nightly builds for latest features and fixes
+- Improved logo clarity in sidebar and about section (128px instead of 64px)
+- Error messages now show full details with auth guidance when needed
+
+### Fixed
+- Gemini API 429 errors by switching to header-based authentication
+- Gemini thinking models returning empty responses
+- Age-restricted video errors now guide users to enable authentication
+- Video preview and queue items now show actual error messages
+
 ## [0.4.0] - 2026-01-24
 
 ### Added
