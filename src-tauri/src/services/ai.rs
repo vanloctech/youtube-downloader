@@ -177,25 +177,46 @@ pub async fn generate_with_gemini(
     
     // Gemini API endpoint - use v1beta for latest models
     let url = format!(
-        "https://generativelanguage.googleapis.com/v1beta/models/{}:generateContent?key={}",
-        model, api_key
+        "https://generativelanguage.googleapis.com/v1beta/models/{}:generateContent",
+        model
     );
     
-    let body = serde_json::json!({
-        "contents": [{
-            "parts": [{
-                "text": prompt
+    // Build request body - for thinking models (gemini-2.5, gemini-3), don't restrict output tokens
+    let is_thinking_model = model.contains("flash-preview") || model.contains("2.5") || model.contains("3-");
+    
+    let body = if is_thinking_model {
+        serde_json::json!({
+            "contents": [{
+                "parts": [{
+                    "text": prompt
+                }]
             }]
-        }],
-        "generationConfig": {
-            "temperature": 0.7,
-            "maxOutputTokens": 1024
-        }
-    });
+        })
+    } else {
+        serde_json::json!({
+            "contents": [{
+                "parts": [{
+                    "text": prompt
+                }]
+            }],
+            "generationConfig": {
+                "temperature": 0.7,
+                "maxOutputTokens": 2048
+            }
+        })
+    };
+    
+    #[cfg(debug_assertions)]
+    {
+        println!("[GEMINI] URL: {}", url);
+        println!("[GEMINI] Model: {}, Is thinking model: {}", model, is_thinking_model);
+        println!("[GEMINI] Request body: {}", serde_json::to_string_pretty(&body).unwrap_or_default());
+    }
     
     let response = client
         .post(&url)
         .header("Content-Type", "application/json")
+        .header("x-goog-api-key", api_key)
         .json(&body)
         .send()
         .await
@@ -203,6 +224,12 @@ pub async fn generate_with_gemini(
     
     let status = response.status();
     let response_text = response.text().await.unwrap_or_default();
+    
+    #[cfg(debug_assertions)]
+    {
+        println!("[GEMINI] Response status: {}", status);
+        println!("[GEMINI] Response body: {}", &response_text[..response_text.len().min(1000)]);
+    }
     
     if !status.is_success() {
         // Parse error message from response
