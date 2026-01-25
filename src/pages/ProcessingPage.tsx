@@ -79,12 +79,47 @@ const VideoPlayer = memo(function VideoPlayer({
   onCancelProcessing,
 }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const hideTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [volume, setVolume] = useState(1);
   const [isMuted, setIsMuted] = useState(false);
   const [showControls, setShowControls] = useState(true);
+
+  // Auto-hide controls after 2.5 seconds of no interaction
+  const resetHideTimer = useCallback(() => {
+    if (hideTimeoutRef.current) {
+      clearTimeout(hideTimeoutRef.current);
+    }
+    setShowControls(true);
+    hideTimeoutRef.current = setTimeout(() => {
+      if (isPlaying) {
+        setShowControls(false);
+      }
+    }, 2500);
+  }, [isPlaying]);
+
+  // Clear timer on unmount
+  useEffect(() => {
+    return () => {
+      if (hideTimeoutRef.current) {
+        clearTimeout(hideTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  // Show controls when paused
+  useEffect(() => {
+    if (!isPlaying) {
+      setShowControls(true);
+      if (hideTimeoutRef.current) {
+        clearTimeout(hideTimeoutRef.current);
+      }
+    } else {
+      resetHideTimer();
+    }
+  }, [isPlaying, resetHideTimer]);
 
   const handleTimeUpdate = useCallback(() => {
     if (videoRef.current) setCurrentTime(videoRef.current.currentTime);
@@ -140,14 +175,16 @@ const VideoPlayer = memo(function VideoPlayer({
       className={cn(
         "relative rounded-xl overflow-hidden w-full",
         "bg-black",
-        !videoSrc && "aspect-video flex items-center justify-center border border-white/10"
+        !videoSrc && "aspect-video flex items-center justify-center border border-white/10",
+        videoSrc && !showControls && "cursor-none"
       )}
       style={videoSrc ? { 
         aspectRatio: videoAspectRatio,
         maxHeight: '70vh'
       } : undefined}
-      onMouseEnter={() => setShowControls(true)}
-      onMouseLeave={() => !isPlaying && setShowControls(true)}
+      onMouseMove={resetHideTimer}
+      onMouseEnter={resetHideTimer}
+      onMouseLeave={() => isPlaying && setShowControls(false)}
     >
       {isLoadingVideo || isGeneratingPreview ? (
         <div className="flex flex-col items-center gap-3 text-white/70">
