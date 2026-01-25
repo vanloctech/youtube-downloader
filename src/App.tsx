@@ -7,6 +7,7 @@ import { LogProvider } from '@/contexts/LogContext';
 import { HistoryProvider } from '@/contexts/HistoryContext';
 import { UpdaterProvider, useUpdater } from '@/contexts/UpdaterContext';
 import { AIProvider } from '@/contexts/AIContext';
+import { ProcessingProvider } from '@/contexts/ProcessingContext';
 import { MainLayout } from '@/components/layout';
 import type { Page } from '@/components/layout';
 import { DownloadPage, UniversalPage, SummaryPage, ProcessingPage, HistoryPage, LogsPage, SettingsPage } from '@/pages';
@@ -91,9 +92,11 @@ function App() {
             <LogProvider>
               <HistoryProvider>
                 <AIProvider>
-                  <UpdaterWrapper>
-                    <AppContent />
-                  </UpdaterWrapper>
+                  <ProcessingProvider>
+                    <UpdaterWrapper>
+                      <AppContent />
+                    </UpdaterWrapper>
+                  </ProcessingProvider>
                 </AIProvider>
               </HistoryProvider>
             </LogProvider>

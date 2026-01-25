@@ -1,7 +1,9 @@
 import { createContext, useContext, useState, useCallback, useRef, useEffect, type ReactNode } from 'react';
-import { invoke } from '@tauri-apps/api/core';
+import { invoke, convertFileSrc } from '@tauri-apps/api/core';
 import { listen, type UnlistenFn } from '@tauri-apps/api/event';
 import { open } from '@tauri-apps/plugin-dialog';
+import { readFile } from '@tauri-apps/plugin-fs';
+import { revealItemInDir } from '@tauri-apps/plugin-opener';
 import type {
   VideoMetadata,
   TimelineSelection,
@@ -17,8 +19,12 @@ import type {
 interface ProcessingContextValue {
   // Video state
   videoPath: string | null;
+  videoSrc: string | null;
   videoMetadata: VideoMetadata | null;
   isLoadingVideo: boolean;
+  isGeneratingPreview: boolean;
+  videoError: string | null;
+  duration: number;
   
   // Timeline
   currentTime: number;
@@ -26,9 +32,12 @@ interface ProcessingContextValue {
   
   // Processing
   status: ProcessingStatus;
+  isProcessing: boolean;
   currentJob: ProcessingJob | null;
+  currentJobId: string | null;
   progress: ProcessingProgress | null;
   generatedCommand: FFmpegCommandResult | null;
+  completedOutputPath: string | null;
   
   // Chat
   messages: ChatMessage[];
@@ -45,16 +54,19 @@ interface ProcessingContextValue {
   selectVideo: () => Promise<void>;
   loadVideo: (path: string) => Promise<void>;
   setCurrentTime: (time: number) => void;
+  setDuration: (duration: number) => void;
   setSelection: (selection: TimelineSelection | null) => void;
+  addMessage: (role: 'user' | 'assistant' | 'system' | 'complete', content: string, options?: { command?: FFmpegCommandResult; outputPath?: string }) => void;
   
   // AI Actions
   sendMessage: (content: string) => Promise<void>;
   generateCommand: (taskType: ProcessingTaskType, options?: Record<string, unknown>) => Promise<void>;
   
   // Processing Actions
-  executeCommand: () => Promise<void>;
+  executeCommand: (command?: FFmpegCommandResult) => Promise<void>;
   cancelProcessing: () => Promise<void>;
   clearCommand: () => void;
+  openOutputFolder: () => Promise<void>;
   
   // History Actions
   loadHistory: () => Promise<void>;
@@ -81,8 +93,12 @@ const ProcessingContext = createContext<ProcessingContextValue | null>(null);
 export function ProcessingProvider({ children }: { children: ReactNode }) {
   // Video state
   const [videoPath, setVideoPath] = useState<string | null>(null);
+  const [videoSrc, setVideoSrc] = useState<string | null>(null);
   const [videoMetadata, setVideoMetadata] = useState<VideoMetadata | null>(null);
   const [isLoadingVideo, setIsLoadingVideo] = useState(false);
+  const [isGeneratingPreview, setIsGeneratingPreview] = useState(false);
+  const [videoError, setVideoError] = useState<string | null>(null);
+  const [duration, setDuration] = useState(0);
   
   // Timeline
   const [currentTime, setCurrentTime] = useState(0);
@@ -90,9 +106,12 @@ export function ProcessingProvider({ children }: { children: ReactNode }) {
   
   // Processing
   const [status, setStatus] = useState<ProcessingStatus>('idle');
+  const [isProcessing, setIsProcessing] = useState(false);
   const [currentJob, setCurrentJob] = useState<ProcessingJob | null>(null);
+  const [currentJobId, setCurrentJobId] = useState<string | null>(null);
   const [progress, setProgress] = useState<ProcessingProgress | null>(null);
   const [generatedCommand, setGeneratedCommand] = useState<FFmpegCommandResult | null>(null);
+  const [completedOutputPath, setCompletedOutputPath] = useState<string | null>(null);
   
   // Chat
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -115,6 +134,7 @@ export function ProcessingProvider({ children }: { children: ReactNode }) {
         setProgress(event.payload);
         if (event.payload.percent >= 100) {
           setStatus('completed');
+          setIsProcessing(false);
         }
       });
     };
@@ -124,6 +144,44 @@ export function ProcessingProvider({ children }: { children: ReactNode }) {
     return () => {
       unlistenRef.current?.();
     };
+  }, []);
+
+  // Helper: load video as blob URL for better compatibility
+  const loadVideoAsBlob = useCallback(async (filePath: string): Promise<string> => {
+    try {
+      const fileData = await readFile(filePath);
+      const blob = new Blob([fileData], { type: 'video/mp4' });
+      return URL.createObjectURL(blob);
+    } catch (err) {
+      console.error('Failed to load video as blob:', err);
+      return convertFileSrc(filePath);
+    }
+  }, []);
+
+  // Add message to chat
+  const addMessage = useCallback((
+    role: 'user' | 'assistant' | 'system' | 'complete',
+    content: string,
+    options?: { command?: FFmpegCommandResult; outputPath?: string }
+  ) => {
+    setMessages(prev => [...prev, {
+      id: crypto.randomUUID(),
+      role,
+      content,
+      command: options?.command,
+      outputPath: options?.outputPath,
+      timestamp: new Date().toISOString(),
+    }]);
+  }, []);
+
+  // Load processing history - defined early so other functions can use it
+  const loadHistory = useCallback(async () => {
+    try {
+      const jobs = await invoke<ProcessingJob[]>('get_processing_history', { limit: 50 });
+      setHistory(jobs);
+    } catch (error) {
+      console.error('Failed to load history:', error);
+    }
   }, []);
 
   // Select video file
@@ -149,38 +207,70 @@ export function ProcessingProvider({ children }: { children: ReactNode }) {
   const loadVideo = useCallback(async (path: string) => {
     setIsLoadingVideo(true);
     setVideoPath(path);
+    setVideoSrc(null);
+    setVideoError(null);
     setSelection(null);
     setCurrentTime(0);
     setGeneratedCommand(null);
     setMessages([]);
+    setCompletedOutputPath(null);
     
     try {
       const metadata = await invoke<VideoMetadata>('get_video_metadata', { path });
       setVideoMetadata(metadata);
       
-      // Add welcome message
-      setMessages([{
-        id: crypto.randomUUID(),
-        role: 'assistant',
-        content: `Video loaded: **${metadata.filename}**\n\n` +
-          `- Duration: ${formatDuration(metadata.duration)}\n` +
-          `- Resolution: ${metadata.width}x${metadata.height}\n` +
-          `- Format: ${metadata.format.toUpperCase()}\n` +
-          `- Size: ${formatFileSize(metadata.file_size)}\n\n` +
-          `What would you like to do with this video?`,
-        timestamp: new Date().toISOString(),
-      }]);
+      // Check if video has problematic codec that needs preview
+      const problematicCodecs = ['vp9', 'vp8', 'av1', 'hevc', 'h265', 'theora'];
+      const hasProblematicCodec = problematicCodecs.some(c => 
+        metadata.video_codec.toLowerCase().includes(c)
+      );
+      
+      if (hasProblematicCodec) {
+        addMessage('system', `${metadata.filename} - Generating preview...`);
+        
+        // Check if preview already exists
+        const existingPreview = await invoke<string | null>('check_preview_exists', { inputPath: path });
+        
+        if (existingPreview) {
+          const previewSrc = await loadVideoAsBlob(existingPreview);
+          setVideoSrc(previewSrc);
+          addMessage('system', 'Ready');
+        } else {
+          setIsGeneratingPreview(true);
+          try {
+            const previewPath = await invoke<string>('generate_video_preview', {
+              inputPath: path,
+              videoCodec: metadata.video_codec,
+            });
+            const previewSrc = await loadVideoAsBlob(previewPath);
+            setVideoSrc(previewSrc);
+            addMessage('system', 'Ready');
+          } catch (previewErr) {
+            const originalSrc = await loadVideoAsBlob(path);
+            setVideoSrc(originalSrc);
+            addMessage('system', `Preview failed: ${previewErr}`);
+          } finally {
+            setIsGeneratingPreview(false);
+          }
+        }
+      } else {
+        const videoSrcUrl = await loadVideoAsBlob(path);
+        setVideoSrc(videoSrcUrl);
+        addMessage('system', `${metadata.filename} loaded`);
+      }
     } catch (error) {
       console.error('Failed to load video metadata:', error);
       setVideoMetadata(null);
+      setVideoError(String(error));
+      addMessage('system', `Error: ${error}`);
     } finally {
       setIsLoadingVideo(false);
     }
-  }, []);
+  }, [addMessage, loadVideoAsBlob]);
 
-  // Send chat message
+  // Send chat message and auto-execute
   const sendMessage = useCallback(async (content: string) => {
-    if (!videoMetadata || isGenerating) return;
+    if (!videoMetadata || isGenerating || !videoPath) return;
     
     // Add user message
     const userMessage: ChatMessage = {
@@ -202,34 +292,73 @@ export function ProcessingProvider({ children }: { children: ReactNode }) {
         metadata: videoMetadata,
       });
       
-      setGeneratedCommand(result);
-      setStatus('ready');
-      
-      // Add assistant message
+      // Add assistant message with explanation
       const assistantMessage: ChatMessage = {
         id: crypto.randomUUID(),
         role: 'assistant',
         content: result.explanation + 
-          (result.warnings.length > 0 ? `\n\n⚠️ ${result.warnings.join('\n')}` : ''),
+          (result.warnings.length > 0 ? `\n\n${result.warnings.join('\n')}` : ''),
         timestamp: new Date().toISOString(),
         command: result,
       };
       setMessages(prev => [...prev, assistantMessage]);
+      setIsGenerating(false);
+      
+      // Auto-execute the command
+      setStatus('processing');
+      setIsProcessing(true);
+      setProgress(null);
+      setCompletedOutputPath(null);
+      
+      const jobId = crypto.randomUUID();
+      setCurrentJobId(jobId);
+      
+      // Save job to history
+      await invoke('save_processing_job', {
+        id: jobId,
+        inputPath: videoPath,
+        outputPath: result.output_path,
+        taskType: 'custom',
+        userPrompt: content,
+        ffmpegCommand: result.command,
+      });
+      
+      addMessage('system', 'Processing...');
+      
+      await invoke('execute_ffmpeg_command', {
+        jobId,
+        command: result.command,
+        inputPath: videoPath,
+        outputPath: result.output_path,
+      });
+      
+      // Update job status
+      await invoke('update_processing_job', {
+        id: jobId,
+        status: 'completed',
+        progress: 100,
+        errorMessage: null,
+      });
+      
+      setStatus('completed');
+      setCompletedOutputPath(result.output_path);
+      
+      // Add complete message with output path
+      const filename = result.output_path.split('/').pop() || 'Output ready';
+      addMessage('complete', filename, { outputPath: result.output_path });
+      
+      await loadHistory();
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       setStatus('error');
-      
-      const assistantMessage: ChatMessage = {
-        id: crypto.randomUUID(),
-        role: 'assistant',
-        content: `Sorry, I couldn't generate a command: ${errorMessage}`,
-        timestamp: new Date().toISOString(),
-      };
-      setMessages(prev => [...prev, assistantMessage]);
+      addMessage('system', `Failed: ${errorMessage}`);
     } finally {
       setIsGenerating(false);
+      setIsProcessing(false);
+      setProgress(null);
+      setCurrentJobId(null);
     }
-  }, [videoPath, videoMetadata, selection, isGenerating]);
+  }, [videoPath, videoMetadata, selection, isGenerating, addMessage, loadHistory]);
 
   // Generate command from quick action
   const generateCommand = useCallback(async (
@@ -273,43 +402,99 @@ export function ProcessingProvider({ children }: { children: ReactNode }) {
   }, [videoPath, videoMetadata, selection]);
 
   // Execute FFmpeg command
-  const executeCommand = useCallback(async () => {
-    if (!generatedCommand) return;
+  const executeCommand = useCallback(async (command?: FFmpegCommandResult) => {
+    const cmdToExecute = command ?? generatedCommand;
+    if (!cmdToExecute || !videoPath) return;
     
     setStatus('processing');
+    setIsProcessing(true);
     setProgress(null);
+    setCompletedOutputPath(null);
     
     const jobId = crypto.randomUUID();
+    setCurrentJobId(jobId);
     
     try {
+      // Save job to history
+      await invoke('save_processing_job', {
+        id: jobId,
+        inputPath: videoPath,
+        outputPath: cmdToExecute.output_path,
+        taskType: 'custom',
+        userPrompt: messages.find(m => m.role === 'user')?.content ?? null,
+        ffmpegCommand: cmdToExecute.command,
+      });
+      
+      addMessage('system', 'Processing...');
+      
       await invoke('execute_ffmpeg_command', {
         jobId,
-        command: generatedCommand.command,
+        command: cmdToExecute.command,
         inputPath: videoPath,
-        outputPath: generatedCommand.output_path,
+        outputPath: cmdToExecute.output_path,
+      });
+      
+      // Update job status
+      await invoke('update_processing_job', {
+        id: jobId,
+        status: 'completed',
+        progress: 100,
+        errorMessage: null,
       });
       
       setStatus('completed');
+      setCompletedOutputPath(cmdToExecute.output_path);
+      setGeneratedCommand(null);
+      
+      // Add complete message with output path
+      const filename = cmdToExecute.output_path.split('/').pop() || 'Output ready';
+      addMessage('complete', filename, { outputPath: cmdToExecute.output_path });
+      
       await loadHistory();
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       setStatus('error');
+      addMessage('system', `Failed: ${errorMessage}`);
+      
+      // Update job with error
+      await invoke('update_processing_job', {
+        id: jobId,
+        status: 'failed',
+        progress: 0,
+        errorMessage: errorMessage,
+      });
+      
       console.error('FFmpeg execution failed:', errorMessage);
+    } finally {
+      setIsProcessing(false);
+      setProgress(null);
+      setCurrentJobId(null);
+      await loadHistory();
     }
-  }, [generatedCommand, videoPath]);
+  }, [generatedCommand, videoPath, messages, addMessage]);
 
   // Cancel processing
   const cancelProcessing = useCallback(async () => {
-    if (currentJob) {
+    if (currentJobId) {
       try {
-        await invoke('cancel_ffmpeg', { jobId: currentJob.id });
+        await invoke('cancel_ffmpeg', { jobId: currentJobId });
+        await invoke('update_processing_job', {
+          id: currentJobId,
+          status: 'cancelled',
+          progress: 0,
+          errorMessage: 'Cancelled',
+        });
+        addMessage('system', 'Cancelled');
       } catch (error) {
         console.error('Failed to cancel:', error);
       }
     }
     setStatus('idle');
+    setIsProcessing(false);
     setProgress(null);
-  }, [currentJob]);
+    setCurrentJobId(null);
+    await loadHistory();
+  }, [currentJobId, addMessage]);
 
   // Clear generated command
   const clearCommand = useCallback(() => {
@@ -317,15 +502,16 @@ export function ProcessingProvider({ children }: { children: ReactNode }) {
     setStatus('idle');
   }, []);
 
-  // Load processing history
-  const loadHistory = useCallback(async () => {
-    try {
-      const jobs = await invoke<ProcessingJob[]>('get_processing_history', { limit: 50 });
-      setHistory(jobs);
-    } catch (error) {
-      console.error('Failed to load history:', error);
+  // Open output folder in file manager
+  const openOutputFolder = useCallback(async () => {
+    if (completedOutputPath) {
+      try {
+        await revealItemInDir(completedOutputPath);
+      } catch (error) {
+        console.error('Failed to open folder:', error);
+      }
     }
-  }, []);
+  }, [completedOutputPath]);
 
   // Delete job from history
   const deleteJob = useCallback(async (id: string) => {
@@ -413,13 +599,19 @@ export function ProcessingProvider({ children }: { children: ReactNode }) {
   // Reset all state
   const reset = useCallback(() => {
     setVideoPath(null);
+    setVideoSrc(null);
     setVideoMetadata(null);
+    setVideoError(null);
+    setDuration(0);
     setCurrentTime(0);
     setSelection(null);
     setStatus('idle');
+    setIsProcessing(false);
     setCurrentJob(null);
+    setCurrentJobId(null);
     setProgress(null);
     setGeneratedCommand(null);
+    setCompletedOutputPath(null);
     setMessages([]);
     setBatchFiles([]);
   }, []);
@@ -428,14 +620,21 @@ export function ProcessingProvider({ children }: { children: ReactNode }) {
     <ProcessingContext.Provider
       value={{
         videoPath,
+        videoSrc,
         videoMetadata,
         isLoadingVideo,
+        isGeneratingPreview,
+        videoError,
+        duration,
         currentTime,
         selection,
         status,
+        isProcessing,
         currentJob,
+        currentJobId,
         progress,
         generatedCommand,
+        completedOutputPath,
         messages,
         isGenerating,
         history,
@@ -444,12 +643,15 @@ export function ProcessingProvider({ children }: { children: ReactNode }) {
         selectVideo,
         loadVideo,
         setCurrentTime,
+        setDuration,
         setSelection,
+        addMessage,
         sendMessage,
         generateCommand,
         executeCommand,
         cancelProcessing,
         clearCommand,
+        openOutputFolder,
         loadHistory,
         deleteJob,
         loadPresets,

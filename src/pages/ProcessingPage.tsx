@@ -1,18 +1,19 @@
-import { useState, useRef, useEffect } from 'react';
-import { invoke } from '@tauri-apps/api/core';
-import { listen } from '@tauri-apps/api/event';
-import { open } from '@tauri-apps/plugin-dialog';
-import { convertFileSrc } from '@tauri-apps/api/core';
-import { readFile } from '@tauri-apps/plugin-fs';
+import { useState, useRef, useEffect, memo, useCallback } from 'react';
 import { revealItemInDir } from '@tauri-apps/plugin-opener';
 import { cn } from '@/lib/utils';
+import { useProcessing } from '@/contexts/ProcessingContext';
 import { ThemePicker } from '@/components/settings/ThemePicker';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Slider } from '@/components/ui/slider';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import {
   Tooltip,
   TooltipContent,
@@ -27,15 +28,10 @@ import {
   SkipForward,
   Volume2,
   VolumeX,
-  Scissors,
   Music,
-  Maximize,
-  RotateCcw,
-  Image,
   Film,
   Zap,
   FileDown,
-  Trash2,
   Send,
   Wand2,
   X,
@@ -43,25 +39,529 @@ import {
   Check,
   AlertCircle,
   Loader2,
-  Settings2,
   History,
   FolderOpen,
-  Copy,
-  Bookmark,
-  BookmarkPlus,
   Maximize2,
-  Minimize2,
   Lightbulb,
+  FileVideo,
+  Terminal,
+  MessageSquare,
+  Calendar,
+  Trash2,
 } from 'lucide-react';
-import type {
-  VideoMetadata,
-  ProcessingProgress,
-  FFmpegCommandResult,
-  ProcessingJob,
-  ProcessingPreset,
-  QuickAction,
-  ChatMessage,
-} from '@/lib/types';
+import type { TimelineSelection, VideoMetadata, ProcessingProgress, ProcessingJob } from '@/lib/types';
+
+// Memoized Video Player to prevent unnecessary re-renders
+interface VideoPlayerProps {
+  videoSrc: string | null;
+  videoPath: string | null;
+  metadata: VideoMetadata | null;
+  isLoadingVideo: boolean;
+  isGeneratingPreview: boolean;
+  isProcessing: boolean;
+  progress: ProcessingProgress | null;
+  selection: TimelineSelection | null;
+  onSelectVideo: () => void;
+  onCancelProcessing: () => void;
+}
+
+const VideoPlayer = memo(function VideoPlayer({
+  videoSrc,
+  videoPath,
+  metadata,
+  isLoadingVideo,
+  isGeneratingPreview,
+  isProcessing,
+  progress,
+  selection,
+  onSelectVideo,
+  onCancelProcessing,
+}: VideoPlayerProps) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [volume, setVolume] = useState(1);
+  const [isMuted, setIsMuted] = useState(false);
+  const [showControls, setShowControls] = useState(true);
+
+  const handleTimeUpdate = useCallback(() => {
+    if (videoRef.current) setCurrentTime(videoRef.current.currentTime);
+  }, []);
+
+  const handleLoadedMetadata = useCallback(() => {
+    if (videoRef.current) setDuration(videoRef.current.duration);
+  }, []);
+
+  const handlePlayPause = useCallback(() => {
+    if (videoRef.current) {
+      if (videoRef.current.paused) {
+        videoRef.current.play();
+      } else {
+        videoRef.current.pause();
+      }
+    }
+  }, []);
+
+  const handleSeek = useCallback((value: number[]) => {
+    if (videoRef.current) {
+      videoRef.current.currentTime = value[0];
+      setCurrentTime(value[0]);
+    }
+  }, []);
+
+  const handleVolumeChange = useCallback((value: number[]) => {
+    if (videoRef.current) {
+      videoRef.current.volume = value[0];
+      setVolume(value[0]);
+      setIsMuted(value[0] === 0);
+    }
+  }, []);
+
+  const handleToggleMute = useCallback(() => {
+    if (videoRef.current) {
+      videoRef.current.muted = !videoRef.current.muted;
+      setIsMuted(videoRef.current.muted);
+    }
+  }, []);
+
+  const formatTime = (seconds: number): string => {
+    if (!seconds || !isFinite(seconds)) return '0:00';
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const videoAspectRatio = metadata ? metadata.width / metadata.height : 16 / 9;
+
+  return (
+    <div
+      className={cn(
+        "relative rounded-xl overflow-hidden w-full",
+        "bg-black",
+        !videoSrc && "aspect-video flex items-center justify-center border border-white/10"
+      )}
+      style={videoSrc ? { 
+        aspectRatio: videoAspectRatio,
+        maxHeight: '70vh'
+      } : undefined}
+      onMouseEnter={() => setShowControls(true)}
+      onMouseLeave={() => !isPlaying && setShowControls(true)}
+    >
+      {isLoadingVideo || isGeneratingPreview ? (
+        <div className="flex flex-col items-center gap-3 text-white/70">
+          <Loader2 className="w-10 h-10 animate-spin" />
+          <p className="text-sm">{isGeneratingPreview ? 'Generating preview...' : 'Loading...'}</p>
+        </div>
+      ) : videoSrc ? (
+        <>
+          <video
+            ref={videoRef}
+            src={videoSrc}
+            className="absolute inset-0 w-full h-full object-contain"
+            onTimeUpdate={handleTimeUpdate}
+            onLoadedMetadata={handleLoadedMetadata}
+            onPlay={() => setIsPlaying(true)}
+            onPause={() => setIsPlaying(false)}
+            onClick={handlePlayPause}
+          />
+
+          {/* Top bar with video title */}
+          <div
+            className={cn(
+              "absolute inset-x-0 top-0 p-3 pb-8",
+              "bg-gradient-to-b from-black/70 to-transparent",
+              "transition-opacity duration-300 flex items-start justify-between",
+              showControls ? "opacity-100" : "opacity-0"
+            )}
+          >
+            {videoPath && (
+              <>
+                <div className="flex-1 min-w-0 mr-3">
+                  <p className="text-sm font-medium text-white truncate">
+                    {videoPath.split('/').pop()}
+                  </p>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 text-xs text-white/70 hover:text-white hover:bg-white/20 flex-shrink-0"
+                  onClick={onSelectVideo}
+                >
+                  <Upload className="w-3 h-3 mr-1" />
+                  Change
+                </Button>
+              </>
+            )}
+          </div>
+
+          {/* Video Controls Overlay */}
+          <div
+            className={cn(
+              "absolute inset-x-0 bottom-0 p-3 pt-12",
+              "bg-gradient-to-t from-black/80 via-black/40 to-transparent",
+              "transition-opacity duration-300",
+              showControls ? "opacity-100" : "opacity-0"
+            )}
+          >
+            {/* Timeline */}
+            <div className="relative mb-3">
+              {/* Selection range */}
+              {selection && duration > 0 && (
+                <div
+                  className="absolute h-1 bg-primary/50 rounded top-1/2 -translate-y-1/2 pointer-events-none z-10"
+                  style={{
+                    left: `${(selection.start / duration) * 100}%`,
+                    width: `${((selection.end - selection.start) / duration) * 100}%`,
+                  }}
+                />
+              )}
+              <Slider
+                value={[currentTime]}
+                min={0}
+                max={duration || 100}
+                step={0.1}
+                onValueChange={handleSeek}
+                className="cursor-pointer"
+              />
+            </div>
+
+            {/* Controls Row */}
+            <div className="flex items-center gap-2">
+              {/* Play/Pause */}
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-white hover:bg-white/20"
+                onClick={handlePlayPause}
+              >
+                {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+              </Button>
+
+              {/* Skip */}
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-white/70 hover:bg-white/20 hover:text-white"
+                onClick={() => handleSeek([currentTime - 10])}
+              >
+                <SkipBack className="w-4 h-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-white/70 hover:bg-white/20 hover:text-white"
+                onClick={() => handleSeek([currentTime + 10])}
+              >
+                <SkipForward className="w-4 h-4" />
+              </Button>
+
+              {/* Time */}
+              <span className="text-xs text-white/70 font-mono min-w-[80px]">
+                {formatTime(currentTime)} / {formatTime(duration)}
+              </span>
+
+              <div className="flex-1" />
+
+              {/* Volume */}
+              <div className="flex items-center gap-1 ml-2">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-white/70 hover:bg-white/20 hover:text-white"
+                  onClick={handleToggleMute}
+                >
+                  {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+                </Button>
+                <Slider
+                  value={[isMuted ? 0 : volume]}
+                  min={0}
+                  max={1}
+                  step={0.1}
+                  onValueChange={handleVolumeChange}
+                  className="w-20"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Processing Overlay */}
+          {isProcessing && progress && (
+            <div className="absolute inset-0 bg-black/80 flex flex-col items-center justify-center gap-3">
+              <Loader2 className="w-10 h-10 animate-spin text-primary" />
+              <div className="text-center text-white">
+                <p className="font-medium">{progress.percent.toFixed(0)}%</p>
+                <p className="text-xs text-white/60">{progress.speed}</p>
+              </div>
+              <Progress value={progress.percent} className="w-48" />
+              <Button variant="destructive" size="sm" onClick={onCancelProcessing}>
+                Cancel
+              </Button>
+            </div>
+          )}
+        </>
+      ) : (
+        <div className="flex flex-col items-center gap-4 text-muted-foreground p-8">
+          <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center">
+            <Film className="w-8 h-8 opacity-50" />
+          </div>
+          <div className="text-center">
+            <p className="font-medium">No video loaded</p>
+            <p className="text-sm text-muted-foreground/70 mt-1">Select a video to start editing</p>
+          </div>
+          <Button onClick={onSelectVideo} className="mt-2">
+            <Upload className="w-4 h-4 mr-2" />
+            Select Video
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+});
+
+// History Dialog Component
+interface HistoryDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  history: ProcessingJob[];
+  onDelete: (id: string) => void;
+}
+
+function HistoryDialog({ open, onOpenChange, history, onDelete }: HistoryDialogProps) {
+  const [selectedJob, setSelectedJob] = useState<ProcessingJob | null>(null);
+
+  const formatDate = (dateStr: string) => {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('vi-VN', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'completed':
+        return <Badge className="bg-green-500/10 text-green-500 border-green-500/20">Completed</Badge>;
+      case 'failed':
+        return <Badge className="bg-red-500/10 text-red-500 border-red-500/20">Failed</Badge>;
+      case 'cancelled':
+        return <Badge className="bg-yellow-500/10 text-yellow-500 border-yellow-500/20">Cancelled</Badge>;
+      default:
+        return <Badge variant="secondary">{status}</Badge>;
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-4xl h-[85vh] p-0 gap-0 flex flex-col overflow-hidden">
+        <DialogHeader className="flex-shrink-0 px-6 py-4 border-b">
+          <DialogTitle className="flex items-center gap-2">
+            <History className="w-5 h-5" />
+            Processing History
+          </DialogTitle>
+        </DialogHeader>
+
+        <div className="flex flex-1 min-h-0 overflow-hidden">
+          {/* Left: Job List */}
+          <div className="w-80 border-r flex flex-col min-h-0 overflow-hidden">
+            <ScrollArea className="flex-1">
+              <div className="p-2 space-y-1">
+                {history.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-12 text-center">
+                    <div className="w-12 h-12 rounded-full bg-muted/50 flex items-center justify-center mb-3">
+                      <History className="w-6 h-6 text-muted-foreground/50" />
+                    </div>
+                    <p className="text-sm text-muted-foreground">No processing history</p>
+                  </div>
+                ) : (
+                  history.map((job) => (
+                    <button
+                      key={job.id}
+                      onClick={() => setSelectedJob(job)}
+                      className={cn(
+                        "w-full text-left p-3 rounded-lg transition-colors",
+                        "hover:bg-muted/50",
+                        selectedJob?.id === job.id && "bg-muted"
+                      )}
+                    >
+                      <div className="flex items-start gap-2">
+                        <div className={cn(
+                          "w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5",
+                          job.status === 'completed' && "bg-green-500/10",
+                          job.status === 'failed' && "bg-red-500/10",
+                          job.status === 'cancelled' && "bg-yellow-500/10"
+                        )}>
+                          {job.status === 'completed' ? (
+                            <Check className="w-4 h-4 text-green-500" />
+                          ) : job.status === 'failed' ? (
+                            <AlertCircle className="w-4 h-4 text-red-500" />
+                          ) : (
+                            <Clock className="w-4 h-4 text-yellow-500" />
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0 overflow-hidden">
+                          <p className="text-sm font-medium truncate">
+                            {job.input_path.split('/').pop()}
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            {formatDate(job.created_at)}
+                          </p>
+                          {job.user_prompt && (
+                            <p className="text-xs text-muted-foreground/70 mt-1 line-clamp-2">
+                              "{job.user_prompt}"
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </button>
+                  ))
+                )}
+              </div>
+            </ScrollArea>
+          </div>
+
+          {/* Right: Job Details */}
+          <div className="flex-1 flex flex-col min-h-0 min-w-0 overflow-hidden">
+            {selectedJob ? (
+              <ScrollArea className="flex-1">
+                <div className="p-6 space-y-6">
+                  {/* Header */}
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-lg break-words">
+                        {selectedJob.input_path.split('/').pop()}
+                      </h3>
+                      <div className="flex items-center gap-2 mt-2 flex-wrap">
+                        {getStatusBadge(selectedJob.status)}
+                        <span className="text-xs text-muted-foreground">
+                          {formatDate(selectedJob.created_at)}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      {selectedJob.status === 'completed' && selectedJob.output_path && (
+                        <Button
+                          size="sm"
+                          onClick={() => revealItemInDir(selectedJob.output_path!)}
+                          className="gap-1.5"
+                        >
+                          <FolderOpen className="w-4 h-4" />
+                          Open Folder
+                        </Button>
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-muted-foreground hover:text-red-500"
+                        onClick={() => {
+                          onDelete(selectedJob.id);
+                          setSelectedJob(null);
+                        }}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* User Prompt */}
+                  {selectedJob.user_prompt && (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 text-sm font-medium">
+                        <MessageSquare className="w-4 h-4 text-primary" />
+                        Prompt
+                      </div>
+                      <div className="p-3 rounded-lg bg-primary/5 border border-primary/10">
+                        <p className="text-sm break-words whitespace-pre-wrap">{selectedJob.user_prompt}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Input/Output Files */}
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 text-sm font-medium">
+                        <FileVideo className="w-4 h-4 text-blue-500" />
+                        Input
+                      </div>
+                      <div className="p-3 rounded-lg bg-muted/50 border overflow-hidden">
+                        <p className="text-xs text-muted-foreground break-all">
+                          {selectedJob.input_path}
+                        </p>
+                      </div>
+                    </div>
+                    {selectedJob.output_path && (
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 text-sm font-medium">
+                          <FileDown className="w-4 h-4 text-green-500" />
+                          Output
+                        </div>
+                        <div className="p-3 rounded-lg bg-muted/50 border overflow-hidden">
+                          <p className="text-xs text-muted-foreground break-all">
+                            {selectedJob.output_path}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* FFmpeg Command */}
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 text-sm font-medium">
+                      <Terminal className="w-4 h-4 text-orange-500" />
+                      FFmpeg Command
+                    </div>
+                    <div className="p-3 rounded-lg bg-zinc-900 border border-zinc-800 overflow-x-auto">
+                      <code className="text-xs text-zinc-300 break-all whitespace-pre-wrap font-mono block">
+                        {selectedJob.ffmpeg_command}
+                      </code>
+                    </div>
+                  </div>
+
+                  {/* Error Message */}
+                  {selectedJob.error_message && (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 text-sm font-medium text-red-500">
+                        <AlertCircle className="w-4 h-4" />
+                        Error
+                      </div>
+                      <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20">
+                        <p className="text-sm text-red-500 break-words whitespace-pre-wrap">{selectedJob.error_message}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Timestamps */}
+                  <div className="flex items-center gap-4 text-xs text-muted-foreground pt-2 border-t flex-wrap">
+                    <div className="flex items-center gap-1.5">
+                      <Calendar className="w-3.5 h-3.5" />
+                      Created: {formatDate(selectedJob.created_at)}
+                    </div>
+                    {selectedJob.completed_at && (
+                      <div className="flex items-center gap-1.5">
+                        <Check className="w-3.5 h-3.5" />
+                        Completed: {formatDate(selectedJob.completed_at)}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </ScrollArea>
+            ) : (
+              <div className="flex-1 flex flex-col items-center justify-center text-center p-6">
+                <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center mb-4">
+                  <FileVideo className="w-8 h-8 text-muted-foreground/50" />
+                </div>
+                <p className="text-muted-foreground">Select a job to view details</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 // Prompt suggestions for chat
 const promptSuggestions = [
@@ -77,270 +577,45 @@ const promptSuggestions = [
   { id: 'remove_audio', label: 'Mute', prompt: 'Remove audio from video' },
 ];
 
-interface TimelineSelection {
-  start: number;
-  end: number;
-}
-
 export function ProcessingPage() {
-  // Video state
-  const [videoPath, setVideoPath] = useState<string | null>(null);
-  const [videoSrc, setVideoSrc] = useState<string | null>(null);
-  const [metadata, setMetadata] = useState<VideoMetadata | null>(null);
-  const [isLoadingVideo, setIsLoadingVideo] = useState(false);
-  const [isGeneratingPreview, setIsGeneratingPreview] = useState(false);
-  const [videoError, setVideoError] = useState<string | null>(null);
+  // Get state and actions from context (persistent across navigation)
+  const {
+    videoPath,
+    videoSrc,
+    videoMetadata: metadata,
+    isLoadingVideo,
+    isGeneratingPreview,
+    selection,
+    isProcessing,
+    progress,
+    messages,
+    isGenerating,
+    history,
+    selectVideo,
+    sendMessage,
+    cancelProcessing,
+    loadHistory,
+    deleteJob,
+  } = useProcessing();
 
-  // Player state
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(0);
-  const [volume, setVolume] = useState(1);
-  const [isMuted, setIsMuted] = useState(false);
-  const [showControls, setShowControls] = useState(true);
-  const controlsTimeoutRef = useRef<number | null>(null);
-
-  // Timeline selection
-  const [selection, setSelection] = useState<TimelineSelection | null>(null);
-
-  // Processing state
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [progress, setProgress] = useState<ProcessingProgress | null>(null);
-  const [currentCommand, setCurrentCommand] = useState<FFmpegCommandResult | null>(null);
-  const [currentJobId, setCurrentJobId] = useState<string | null>(null);
-  const [completedOutputPath, setCompletedOutputPath] = useState<string | null>(null);
-
-  // Chat state
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  // Chat UI state (local, OK to reset)
   const [inputMessage, setInputMessage] = useState('');
-  const [isGenerating, setIsGenerating] = useState(false);
   const [isInputFocused, setIsInputFocused] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // History dialog
+  const [showHistory, setShowHistory] = useState(false);
 
   // Auto-scroll to bottom when messages change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isGenerating, isProcessing]);
 
-  // History
-  const [history, setHistory] = useState<ProcessingJob[]>([]);
-  const [showHistory, setShowHistory] = useState(false);
-
-  // Keyboard shortcuts
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Don't trigger shortcuts when typing in input
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
-        return;
-      }
-
-      if (!videoRef.current || !videoSrc) return;
-
-      switch (e.code) {
-        case 'Space':
-          e.preventDefault();
-          handlePlayPause();
-          break;
-        case 'ArrowLeft':
-          e.preventDefault();
-          handleSeek([currentTime - (e.shiftKey ? 1 : 5)]);
-          break;
-        case 'ArrowRight':
-          e.preventDefault();
-          handleSeek([currentTime + (e.shiftKey ? 1 : 5)]);
-          break;
-        case 'KeyI':
-        case 'BracketLeft':
-          e.preventDefault();
-          handleSetSelection('start');
-          break;
-        case 'KeyO':
-        case 'BracketRight':
-          e.preventDefault();
-          handleSetSelection('end');
-          break;
-        case 'KeyM':
-          e.preventDefault();
-          handleToggleMute();
-          break;
-        case 'ArrowUp':
-          e.preventDefault();
-          handleVolumeChange([Math.min(1, volume + 0.1)]);
-          break;
-        case 'ArrowDown':
-          e.preventDefault();
-          handleVolumeChange([Math.max(0, volume - 0.1)]);
-          break;
-        case 'Escape':
-          if (selection) {
-            e.preventDefault();
-            setSelection(null);
-          }
-          break;
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [videoSrc, currentTime, volume, selection, isPlaying]);
-
-  // Listen for processing progress
-  useEffect(() => {
-    const unlisten = listen<ProcessingProgress>('processing-progress', (event) => {
-      setProgress(event.payload);
-      if (event.payload.percent >= 100) {
-        setIsProcessing(false);
-        setProgress(null);
-        addMessage('system', 'Processing completed!');
-        loadHistory();
-      }
-    });
-    return () => { unlisten.then(fn => fn()); };
-  }, []);
-
+  // Load history on mount
   useEffect(() => {
     loadHistory();
-  }, []);
-
-  const loadHistory = async () => {
-    try {
-      const jobs = await invoke<ProcessingJob[]>('get_processing_history', { limit: 20 });
-      setHistory(jobs);
-    } catch (err) {
-      console.error('Failed to load history:', err);
-    }
-  };
-
-  const addMessage = (role: 'user' | 'assistant' | 'system' | 'complete', content: string, options?: { command?: FFmpegCommandResult; outputPath?: string }) => {
-    setMessages(prev => [...prev, {
-      id: crypto.randomUUID(),
-      role,
-      content,
-      command: options?.command,
-      outputPath: options?.outputPath,
-      timestamp: new Date().toISOString(),
-    }]);
-  };
-
-  const loadVideoAsBlob = async (filePath: string): Promise<string> => {
-    try {
-      const fileData = await readFile(filePath);
-      const blob = new Blob([fileData], { type: 'video/mp4' });
-      return URL.createObjectURL(blob);
-    } catch (err) {
-      console.error('Failed to load video as blob:', err);
-      return convertFileSrc(filePath);
-    }
-  };
-
-  const handleSelectVideo = async () => {
-    try {
-      const selected = await open({
-        multiple: false,
-        filters: [{ name: 'Video', extensions: ['mp4', 'mkv', 'avi', 'mov', 'webm', 'flv', 'm4v'] }],
-      });
-
-      if (selected && typeof selected === 'string') {
-        setIsLoadingVideo(true);
-        setVideoPath(selected);
-        setVideoError(null);
-        setVideoSrc(null);
-        setSelection(null);
-        setMessages([]);
-
-        const meta = await invoke<VideoMetadata>('get_video_metadata', { path: selected });
-        setMetadata(meta);
-
-        const problematicCodecs = ['vp9', 'vp8', 'av1', 'hevc', 'h265', 'theora'];
-        const hasProblematicCodec = problematicCodecs.some(c => meta.video_codec.toLowerCase().includes(c));
-
-        if (hasProblematicCodec) {
-          addMessage('system', `${meta.filename} - Generating preview...`);
-          const existingPreview = await invoke<string | null>('check_preview_exists', { inputPath: selected });
-
-          if (existingPreview) {
-            const previewSrc = await loadVideoAsBlob(existingPreview);
-            setVideoSrc(previewSrc);
-            addMessage('system', 'Ready');
-          } else {
-            setIsGeneratingPreview(true);
-            try {
-              const previewPath = await invoke<string>('generate_video_preview', {
-                inputPath: selected,
-                videoCodec: meta.video_codec,
-              });
-              const previewSrc = await loadVideoAsBlob(previewPath);
-              setVideoSrc(previewSrc);
-              addMessage('system', 'Ready');
-            } catch (previewErr) {
-              const originalSrc = await loadVideoAsBlob(selected);
-              setVideoSrc(originalSrc);
-              addMessage('system', `Preview failed: ${previewErr}`);
-            } finally {
-              setIsGeneratingPreview(false);
-            }
-          }
-        } else {
-          const videoSrcUrl = await loadVideoAsBlob(selected);
-          setVideoSrc(videoSrcUrl);
-          addMessage('system', `${meta.filename} loaded`);
-        }
-      }
-    } catch (err) {
-      console.error('Failed to load video:', err);
-      addMessage('system', `Error: ${err}`);
-    } finally {
-      setIsLoadingVideo(false);
-    }
-  };
-
-  const handleTimeUpdate = () => {
-    if (videoRef.current) setCurrentTime(videoRef.current.currentTime);
-  };
-
-  const handleLoadedMetadata = () => {
-    if (videoRef.current) setDuration(videoRef.current.duration);
-  };
-
-  const handlePlayPause = () => {
-    if (videoRef.current) {
-      if (isPlaying) videoRef.current.pause();
-      else videoRef.current.play();
-      setIsPlaying(!isPlaying);
-    }
-  };
-
-  const handleSeek = (value: number[]) => {
-    if (videoRef.current) {
-      videoRef.current.currentTime = value[0];
-      setCurrentTime(value[0]);
-    }
-  };
-
-  const handleVolumeChange = (value: number[]) => {
-    if (videoRef.current) {
-      videoRef.current.volume = value[0];
-      setVolume(value[0]);
-      setIsMuted(value[0] === 0);
-    }
-  };
-
-  const handleToggleMute = () => {
-    if (videoRef.current) {
-      videoRef.current.muted = !isMuted;
-      setIsMuted(!isMuted);
-    }
-  };
-
-  const handleSetSelection = (type: 'start' | 'end') => {
-    if (type === 'start') {
-      setSelection(prev => ({ start: currentTime, end: prev?.end ?? duration }));
-    } else {
-      setSelection(prev => ({ start: prev?.start ?? 0, end: currentTime }));
-    }
-  };
+  }, [loadHistory]);
 
   const handleSelectSuggestion = (prompt: string) => {
     setInputMessage(prompt);
@@ -352,115 +627,9 @@ export function ProcessingPage() {
 
     const message = inputMessage.trim();
     setInputMessage('');
-    addMessage('user', message);
-
-    try {
-      setIsGenerating(true);
-      setCompletedOutputPath(null);
-      const result = await invoke<FFmpegCommandResult>('generate_processing_command', {
-        inputPath: videoPath,
-        userPrompt: message,
-        timelineStart: selection?.start ?? null,
-        timelineEnd: selection?.end ?? null,
-        metadata,
-      });
-
-      addMessage('assistant', result.explanation);
-      setIsGenerating(false);
-      
-      // Auto execute
-      await handleExecuteCommand(result);
-    } catch (err) {
-      addMessage('system', `Error: ${err}`);
-      setIsGenerating(false);
-    }
-  };
-
-  const handleExecuteCommand = async (command: FFmpegCommandResult) => {
-    if (!command || !videoPath) return;
-
-    try {
-      setIsProcessing(true);
-      setCompletedOutputPath(null);
-      const jobId = crypto.randomUUID();
-      setCurrentJobId(jobId);
-
-      await invoke('save_processing_job', {
-        id: jobId,
-        inputPath: videoPath,
-        outputPath: command.output_path,
-        taskType: 'custom',
-        userPrompt: messages.find(m => m.role === 'user')?.content ?? null,
-        ffmpegCommand: command.command,
-      });
-
-      addMessage('system', 'Processing...');
-
-      await invoke('execute_ffmpeg_command', {
-        jobId,
-        command: command.command,
-        inputPath: videoPath,
-        outputPath: command.output_path,
-      });
-
-      await invoke('update_processing_job', {
-        id: jobId,
-        status: 'completed',
-        progress: 100,
-        errorMessage: null,
-      });
-
-      setCompletedOutputPath(command.output_path);
-      setCurrentCommand(null);
-      // Add complete message with output path for "Open Folder" button
-      addMessage('complete', command.output_path.split('/').pop() || 'Output ready', { outputPath: command.output_path });
-    } catch (err) {
-      addMessage('system', `Failed: ${err}`);
-      if (currentJobId) {
-        await invoke('update_processing_job', {
-          id: currentJobId,
-          status: 'failed',
-          progress: 0,
-          errorMessage: String(err),
-        });
-      }
-    } finally {
-      setIsProcessing(false);
-      setProgress(null);
-      setCurrentJobId(null);
-      loadHistory();
-    }
-  };
-
-  const handleOpenOutputFolder = async () => {
-    if (completedOutputPath) {
-      try {
-        await revealItemInDir(completedOutputPath);
-      } catch (err) {
-        console.error('Failed to open folder:', err);
-      }
-    }
-  };
-
-  const handleCancelProcessing = async () => {
-    if (currentJobId) {
-      try {
-        await invoke('cancel_ffmpeg', { jobId: currentJobId });
-        await invoke('update_processing_job', {
-          id: currentJobId,
-          status: 'cancelled',
-          progress: 0,
-          errorMessage: 'Cancelled',
-        });
-        addMessage('system', 'Cancelled');
-      } catch (err) {
-        console.error('Failed to cancel:', err);
-      }
-      setIsProcessing(false);
-      setProgress(null);
-      setCurrentJobId(null);
-      loadHistory();
-    }
+    
+    // sendMessage handles: adding user message, generating command, and auto-executing
+    await sendMessage(message);
   };
 
   const formatTime = (seconds: number): string => {
@@ -469,11 +638,6 @@ export function ProcessingPage() {
     const secs = Math.floor(seconds % 60);
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
-
-  const playheadPercent = duration > 0 ? (currentTime / duration) * 100 : 0;
-
-  // Calculate dynamic aspect ratio from video metadata
-  const videoAspectRatio = metadata ? metadata.width / metadata.height : 16 / 9;
 
   return (
     <TooltipProvider>
@@ -509,188 +673,19 @@ export function ProcessingPage() {
         <div className="flex-1 flex overflow-hidden">
           {/* Left: Video + Controls */}
           <div className="w-[70%] flex flex-col p-4 sm:p-6 gap-4 overflow-hidden">
-            {/* Video Player Container - YouTube style */}
-            <div
-              className={cn(
-                "relative rounded-xl overflow-hidden w-full",
-                "bg-black",
-                !videoSrc && "aspect-video flex items-center justify-center border border-white/10"
-              )}
-              style={videoSrc ? { 
-                aspectRatio: videoAspectRatio,
-                maxHeight: '70vh'
-              } : undefined}
-              onMouseEnter={() => setShowControls(true)}
-              onMouseLeave={() => !isPlaying && setShowControls(true)}
-            >
-              {isLoadingVideo || isGeneratingPreview ? (
-                <div className="flex flex-col items-center gap-3 text-white/70">
-                  <Loader2 className="w-10 h-10 animate-spin" />
-                  <p className="text-sm">{isGeneratingPreview ? 'Generating preview...' : 'Loading...'}</p>
-                </div>
-              ) : videoSrc ? (
-                <>
-                  <video
-                    ref={videoRef}
-                    src={videoSrc}
-                    className="absolute inset-0 w-full h-full object-contain"
-                    onTimeUpdate={handleTimeUpdate}
-                    onLoadedMetadata={handleLoadedMetadata}
-                    onPlay={() => setIsPlaying(true)}
-                    onPause={() => setIsPlaying(false)}
-                    onClick={handlePlayPause}
-                  />
-
-                  {/* Top bar with video title */}
-                  <div
-                    className={cn(
-                      "absolute inset-x-0 top-0 p-3 pb-8",
-                      "bg-gradient-to-b from-black/70 to-transparent",
-                      "transition-opacity duration-300 flex items-start justify-between",
-                      showControls ? "opacity-100" : "opacity-0"
-                    )}
-                  >
-                    {videoPath && (
-                      <>
-                        <div className="flex-1 min-w-0 mr-3">
-                          <p className="text-sm font-medium text-white truncate">
-                            {videoPath.split('/').pop()}
-                          </p>
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-6 text-xs text-white/70 hover:text-white hover:bg-white/20 flex-shrink-0"
-                          onClick={handleSelectVideo}
-                        >
-                          <Upload className="w-3 h-3 mr-1" />
-                          Change
-                        </Button>
-                      </>
-                    )}
-                  </div>
-
-                  {/* Video Controls Overlay */}
-                  <div
-                    className={cn(
-                      "absolute inset-x-0 bottom-0 p-3 pt-12",
-                      "bg-gradient-to-t from-black/80 via-black/40 to-transparent",
-                      "transition-opacity duration-300",
-                      showControls ? "opacity-100" : "opacity-0"
-                    )}
-                  >
-                    {/* Timeline */}
-                    <div className="relative mb-3">
-                      {/* Selection range */}
-                      {selection && duration > 0 && (
-                        <div
-                          className="absolute h-1 bg-primary/50 rounded top-1/2 -translate-y-1/2 pointer-events-none z-10"
-                          style={{
-                            left: `${(selection.start / duration) * 100}%`,
-                            width: `${((selection.end - selection.start) / duration) * 100}%`,
-                          }}
-                        />
-                      )}
-                      <Slider
-                        value={[currentTime]}
-                        min={0}
-                        max={duration || 100}
-                        step={0.1}
-                        onValueChange={handleSeek}
-                        className="cursor-pointer"
-                      />
-                    </div>
-
-                    {/* Controls Row */}
-                    <div className="flex items-center gap-2">
-                      {/* Play/Pause */}
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-white hover:bg-white/20"
-                        onClick={handlePlayPause}
-                      >
-                        {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-                      </Button>
-
-                      {/* Skip */}
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-white/70 hover:bg-white/20 hover:text-white"
-                        onClick={() => handleSeek([currentTime - 10])}
-                      >
-                        <SkipBack className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-white/70 hover:bg-white/20 hover:text-white"
-                        onClick={() => handleSeek([currentTime + 10])}
-                      >
-                        <SkipForward className="w-4 h-4" />
-                      </Button>
-
-                      {/* Time */}
-                      <span className="text-xs text-white/70 font-mono min-w-[80px]">
-                        {formatTime(currentTime)} / {formatTime(duration)}
-                      </span>
-
-                      <div className="flex-1" />
-
-                      {/* Volume */}
-                      <div className="flex items-center gap-1 ml-2">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-white/70 hover:bg-white/20 hover:text-white"
-                          onClick={handleToggleMute}
-                        >
-                          {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-                        </Button>
-                        <Slider
-                          value={[isMuted ? 0 : volume]}
-                          min={0}
-                          max={1}
-                          step={0.1}
-                          onValueChange={handleVolumeChange}
-                          className="w-20"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Processing Overlay */}
-                  {isProcessing && progress && (
-                    <div className="absolute inset-0 bg-black/80 flex flex-col items-center justify-center gap-3">
-                      <Loader2 className="w-10 h-10 animate-spin text-primary" />
-                      <div className="text-center text-white">
-                        <p className="font-medium">{progress.percent.toFixed(0)}%</p>
-                        <p className="text-xs text-white/60">{progress.speed}</p>
-                      </div>
-                      <Progress value={progress.percent} className="w-48" />
-                      <Button variant="destructive" size="sm" onClick={handleCancelProcessing}>
-                        Cancel
-                      </Button>
-                    </div>
-                  )}
-                </>
-              ) : (
-                <div className="flex flex-col items-center gap-4 text-muted-foreground p-8">
-                  <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center">
-                    <Film className="w-8 h-8 opacity-50" />
-                  </div>
-                  <div className="text-center">
-                    <p className="font-medium">No video loaded</p>
-                    <p className="text-sm text-muted-foreground/70 mt-1">Select a video to start editing</p>
-                  </div>
-                  <Button onClick={handleSelectVideo} className="mt-2">
-                    <Upload className="w-4 h-4 mr-2" />
-                    Select Video
-                  </Button>
-                </div>
-              )}
-            </div>
+            {/* Memoized Video Player - prevents re-renders from chat/processing state changes */}
+            <VideoPlayer
+              videoSrc={videoSrc}
+              videoPath={videoPath}
+              metadata={metadata}
+              isLoadingVideo={isLoadingVideo}
+              isGeneratingPreview={isGeneratingPreview}
+              isProcessing={isProcessing}
+              progress={progress}
+              selection={selection}
+              onSelectVideo={selectVideo}
+              onCancelProcessing={cancelProcessing}
+            />
 
             {/* Metadata Bar */}
             {metadata && (
@@ -968,56 +963,15 @@ export function ProcessingPage() {
               </div>
             </div>
           </div>
-
-          {/* History Panel */}
-          {showHistory && (
-            <div className="w-72 border-l border-border flex flex-col bg-muted/10">
-              <div className="p-3 border-b border-border flex items-center justify-between">
-                <h3 className="font-medium text-sm">History</h3>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6"
-                  onClick={() => setShowHistory(false)}
-                >
-                  <X className="w-4 h-4" />
-                </Button>
-              </div>
-              <ScrollArea className="flex-1">
-                <div className="p-2 space-y-1">
-                  {history.length === 0 ? (
-                    <p className="text-center text-muted-foreground/60 text-sm py-8">
-                      No history yet
-                    </p>
-                  ) : (
-                    history.map((job) => (
-                      <div
-                        key={job.id}
-                        className="p-2 rounded-lg hover:bg-muted/50 transition-colors"
-                      >
-                        <div className="flex items-center gap-2">
-                          {job.status === 'completed' ? (
-                            <Check className="w-3 h-3 text-green-500" />
-                          ) : job.status === 'failed' ? (
-                            <AlertCircle className="w-3 h-3 text-red-500" />
-                          ) : (
-                            <Clock className="w-3 h-3 text-muted-foreground" />
-                          )}
-                          <span className="text-xs truncate flex-1">
-                            {job.input_path.split('/').pop()}
-                          </span>
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-1 truncate">
-                          {job.task_type}
-                        </p>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </ScrollArea>
-            </div>
-          )}
         </div>
+
+        {/* History Dialog */}
+        <HistoryDialog
+          open={showHistory}
+          onOpenChange={setShowHistory}
+          history={history}
+          onDelete={deleteJob}
+        />
       </div>
     </TooltipProvider>
   );
