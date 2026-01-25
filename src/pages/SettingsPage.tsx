@@ -148,7 +148,10 @@ export function SettingsPage() {
     ffmpegDownloading,
     ffmpegError,
     ffmpegSuccess,
+    ffmpegUpdateInfo,
+    ffmpegCheckingUpdate,
     checkFfmpeg,
+    checkFfmpegUpdate,
     downloadFfmpeg,
     bunStatus,
     bunLoading,
@@ -358,19 +361,37 @@ export function SettingsPage() {
                         ) : (
                           <Badge variant="destructive" className="text-xs">Not found</Badge>
                         )}
+                        {ffmpegUpdateInfo?.has_update && (
+                          <Badge variant="default" className="text-xs bg-primary">
+                            Update available
+                          </Badge>
+                        )}
                       </div>
                       <p className="text-xs text-muted-foreground mt-0.5">
                         {ffmpegDownloading ? (
                           <span className="flex items-center gap-1 text-primary">
                             <Loader2 className="w-3 h-3 animate-spin" />
-                            Installing...
+                            {ffmpegUpdateInfo?.has_update ? 'Updating...' : 'Installing...'}
+                          </span>
+                        ) : ffmpegCheckingUpdate ? (
+                          <span className="flex items-center gap-1 text-muted-foreground">
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                            Checking for updates...
                           </span>
                         ) : ffmpegSuccess ? (
-                          <span className="text-emerald-500">Installed!</span>
+                          <span className="text-emerald-500">
+                            {ffmpegUpdateInfo?.has_update ? 'Updated!' : 'Installed!'}
+                          </span>
                         ) : ffmpegError ? (
                           <span className="text-destructive">{ffmpegError}</span>
+                        ) : ffmpegUpdateInfo?.has_update ? (
+                          <span className="text-primary">
+                            New version: {ffmpegUpdateInfo.latest_version}
+                          </span>
                         ) : !ffmpegStatus?.installed ? (
                           <span className="text-amber-500">Required for 2K/4K/8K videos</span>
+                        ) : ffmpegStatus?.is_system ? (
+                          'System FFmpeg - update via package manager'
                         ) : (
                           'Audio/video processing'
                         )}
@@ -378,6 +399,11 @@ export function SettingsPage() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
+                    {ffmpegUpdateInfo?.has_update && !ffmpegStatus?.is_system && (
+                      <Button size="sm" onClick={downloadFfmpeg} disabled={ffmpegDownloading}>
+                        {ffmpegDownloading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Update'}
+                      </Button>
+                    )}
                     {!ffmpegStatus?.installed && !ffmpegLoading && (
                       <Button size="sm" onClick={downloadFfmpeg} disabled={ffmpegDownloading}>
                         {ffmpegDownloading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Install'}
@@ -386,10 +412,11 @@ export function SettingsPage() {
                     <Button
                       variant="ghost"
                       size="icon"
-                      onClick={checkFfmpeg}
-                      disabled={ffmpegLoading || ffmpegDownloading}
+                      onClick={checkFfmpegUpdate}
+                      disabled={ffmpegLoading || ffmpegDownloading || ffmpegCheckingUpdate || !ffmpegStatus?.installed}
+                      title="Check for updates"
                     >
-                      <RefreshCw className={cn("w-4 h-4", ffmpegLoading && "animate-spin")} />
+                      <RefreshCw className={cn("w-4 h-4", (ffmpegLoading || ffmpegCheckingUpdate) && "animate-spin")} />
                     </Button>
                   </div>
                 </div>

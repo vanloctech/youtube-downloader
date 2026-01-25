@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Video player with YouTube-style controls overlay
 - Chat interface with message history for iterative editing
 - Real-time FFmpeg progress tracking with cancel support
+- FFmpeg update checker - check for new versions from GitHub releases
 
 ### Fixed
 - AI error message "AI Features is disabled" no longer shows when download fails (Windows)

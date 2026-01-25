@@ -6,7 +6,7 @@ use crate::types::{YtdlpVersionInfo, FfmpegStatus, BunStatus};
 use crate::services::{
     get_ytdlp_version_internal, get_ytdlp_download_info, verify_sha256,
     check_ffmpeg_internal, get_ffmpeg_download_info, parse_ffmpeg_version,
-    get_ffmpeg_path,
+    get_ffmpeg_path, check_ffmpeg_update_internal, FfmpegUpdateInfo,
     check_bun_internal, get_bun_download_url,
 };
 use crate::utils::{extract_tar_gz, extract_tar_xz, extract_zip, extract_bun_from_zip};
@@ -166,6 +166,11 @@ pub async fn update_ytdlp(app: AppHandle) -> Result<String, String> {
 #[tauri::command]
 pub async fn check_ffmpeg(app: AppHandle) -> Result<FfmpegStatus, String> {
     check_ffmpeg_internal(&app).await
+}
+
+#[tauri::command]
+pub async fn check_ffmpeg_update(app: AppHandle) -> Result<FfmpegUpdateInfo, String> {
+    check_ffmpeg_update_internal(&app).await
 }
 
 #[tauri::command]

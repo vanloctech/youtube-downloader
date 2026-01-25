@@ -225,3 +225,107 @@ pub fn get_ffmpeg_download_info() -> FfmpegDownloadInfo {
         }
     }
 }
+
+/// FFmpeg update info
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct FfmpegUpdateInfo {
+    pub has_update: bool,
+    pub current_version: Option<String>,
+    pub latest_version: Option<String>,
+    pub release_url: Option<String>,
+}
+
+/// Get the GitHub API URL for checking latest release
+fn get_ffmpeg_release_api_url() -> &'static str {
+    #[cfg(target_os = "macos")]
+    {
+        "https://api.github.com/repos/vanloctech/ffmpeg-macos/releases/latest"
+    }
+    #[cfg(target_os = "windows")]
+    {
+        "https://api.github.com/repos/BtbN/FFmpeg-Builds/releases/latest"
+    }
+    #[cfg(target_os = "linux")]
+    {
+        "https://api.github.com/repos/BtbN/FFmpeg-Builds/releases/latest"
+    }
+    #[cfg(not(any(target_os = "macos", target_os = "windows", target_os = "linux")))]
+    {
+        ""
+    }
+}
+
+/// Check if FFmpeg update is available
+pub async fn check_ffmpeg_update_internal(app: &AppHandle) -> Result<FfmpegUpdateInfo, String> {
+    // Get current installed version
+    let current_status = check_ffmpeg_internal(app).await?;
+    
+    if !current_status.installed {
+        return Ok(FfmpegUpdateInfo {
+            has_update: false,
+            current_version: None,
+            latest_version: None,
+            release_url: None,
+        });
+    }
+    
+    let current_version = current_status.version.clone();
+    
+    // Only check updates for bundled FFmpeg (not system)
+    if current_status.is_system {
+        return Ok(FfmpegUpdateInfo {
+            has_update: false,
+            current_version,
+            latest_version: None,
+            release_url: Some("System FFmpeg - update via package manager".to_string()),
+        });
+    }
+    
+    let api_url = get_ffmpeg_release_api_url();
+    if api_url.is_empty() {
+        return Err("Unsupported platform".to_string());
+    }
+    
+    // Fetch latest release from GitHub API
+    let client = reqwest::Client::builder()
+        .user_agent("Youwee/0.4.1")
+        .timeout(std::time::Duration::from_secs(30))
+        .build()
+        .map_err(|e| format!("Failed to create HTTP client: {}", e))?;
+    
+    let response = client.get(api_url).send().await
+        .map_err(|e| format!("Failed to fetch release info: {}", e))?;
+    
+    if !response.status().is_success() {
+        return Err(format!("Failed to fetch release info: HTTP {}", response.status()));
+    }
+    
+    let json: serde_json::Value = response.json().await
+        .map_err(|e| format!("Failed to parse release info: {}", e))?;
+    
+    let tag_name = json["tag_name"].as_str()
+        .ok_or("No tag_name in release")?;
+    
+    let html_url = json["html_url"].as_str()
+        .map(|s| s.to_string());
+    
+    // Extract version from tag (remove 'v' prefix if present)
+    let latest_version = tag_name.trim_start_matches('v').to_string();
+    
+    // Compare versions
+    let has_update = if let Some(ref current) = current_version {
+        // Simple comparison: check if versions are different
+        // Current version format: "git-2026-01-22-4561fc5" or similar
+        // Latest version format: could be date-based or semantic
+        !current.contains(&latest_version) && latest_version != *current
+    } else {
+        false
+    };
+    
+    Ok(FfmpegUpdateInfo {
+        has_update,
+        current_version,
+        latest_version: Some(latest_version),
+        release_url: html_url,
+    })
+}

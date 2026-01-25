@@ -23,6 +23,13 @@ export interface BunStatus {
   is_system: boolean;
 }
 
+export interface FfmpegUpdateInfo {
+  has_update: boolean;
+  current_version: string | null;
+  latest_version: string | null;
+  release_url: string | null;
+}
+
 interface DependenciesContextType {
   // yt-dlp state
   ytdlpInfo: YtdlpVersionInfo | null;
@@ -39,6 +46,8 @@ interface DependenciesContextType {
   ffmpegDownloading: boolean;
   ffmpegError: string | null;
   ffmpegSuccess: boolean;
+  ffmpegUpdateInfo: FfmpegUpdateInfo | null;
+  ffmpegCheckingUpdate: boolean;
   
   // Actions
   refreshYtdlpVersion: () => Promise<void>;
@@ -47,6 +56,7 @@ interface DependenciesContextType {
   
   // FFmpeg actions
   checkFfmpeg: () => Promise<void>;
+  checkFfmpegUpdate: () => Promise<void>;
   downloadFfmpeg: () => Promise<void>;
   
   // Bun state
@@ -79,6 +89,8 @@ export function DependenciesProvider({ children }: { children: ReactNode }) {
   const [ffmpegDownloading, setFfmpegDownloading] = useState(false);
   const [ffmpegError, setFfmpegError] = useState<string | null>(null);
   const [ffmpegSuccess, setFfmpegSuccess] = useState(false);
+  const [ffmpegUpdateInfo, setFfmpegUpdateInfo] = useState<FfmpegUpdateInfo | null>(null);
+  const [ffmpegCheckingUpdate, setFfmpegCheckingUpdate] = useState(false);
   
   // Bun state
   const [bunStatus, setBunStatus] = useState<BunStatus | null>(null);
@@ -115,6 +127,20 @@ export function DependenciesProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  // Check FFmpeg update
+  const checkFfmpegUpdate = useCallback(async () => {
+    setFfmpegCheckingUpdate(true);
+    setFfmpegError(null);
+    try {
+      const updateInfo = await invoke<FfmpegUpdateInfo>('check_ffmpeg_update');
+      setFfmpegUpdateInfo(updateInfo);
+    } catch (err) {
+      setFfmpegError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setFfmpegCheckingUpdate(false);
+    }
+  }, []);
+
   // Download FFmpeg
   const downloadFfmpeg = useCallback(async () => {
     setFfmpegDownloading(true);
@@ -129,6 +155,7 @@ export function DependenciesProvider({ children }: { children: ReactNode }) {
         is_system: false,
       });
       setFfmpegSuccess(true);
+      setFfmpegUpdateInfo(null); // Clear update info after successful download
       // Hide success message after 3 seconds
       setTimeout(() => setFfmpegSuccess(false), 3000);
       // Refresh to get full status
@@ -242,7 +269,10 @@ export function DependenciesProvider({ children }: { children: ReactNode }) {
         ffmpegDownloading,
         ffmpegError,
         ffmpegSuccess,
+        ffmpegUpdateInfo,
+        ffmpegCheckingUpdate,
         checkFfmpeg,
+        checkFfmpegUpdate,
         downloadFfmpeg,
         // Bun
         bunStatus,

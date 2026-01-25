@@ -54,6 +54,7 @@ pub fn run() {
             commands::update_ytdlp,
             // FFmpeg commands
             commands::check_ffmpeg,
+            commands::check_ffmpeg_update,
             commands::download_ffmpeg,
             commands::get_ffmpeg_path_for_ytdlp,
             // Bun commands
