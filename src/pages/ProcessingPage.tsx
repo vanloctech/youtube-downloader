@@ -133,14 +133,12 @@ export function ProcessingPage() {
                       {(metadata.file_size / 1_000_000).toFixed(1)} MB
                     </span>
                   </div>
-                  {metadata.frame_rate && (
+                  {metadata.fps && (
                     <div className="flex items-center gap-1.5 text-xs">
                       <div className="w-5 h-5 rounded bg-muted/50 flex items-center justify-center">
                         <Zap className="w-3 h-3 text-muted-foreground" />
                       </div>
-                      <span className="text-muted-foreground">
-                        {metadata.frame_rate.toFixed(0)} fps
-                      </span>
+                      <span className="text-muted-foreground">{metadata.fps.toFixed(0)} fps</span>
                     </div>
                   )}
                 </div>
