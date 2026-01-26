@@ -687,11 +687,34 @@ pub async fn execute_ffmpeg_command(
     
     // Get video metadata for progress calculation
     let metadata = get_video_metadata(app.clone(), input_path.clone()).await?;
+    let total_duration_secs = metadata.duration;
     let total_frames = (metadata.duration * metadata.fps) as i64;
-    println!("[FFMPEG] Total frames: {}", total_frames);
+    println!("[FFMPEG] Total duration: {} secs, Total frames: {}", total_duration_secs, total_frames);
+    
+    // Ensure -progress pipe:2 is in the command for progress tracking
+    let command_with_progress = if !command.contains("-progress") {
+        // Find the last argument (output path) and insert -progress before it
+        if let Some(last_quote) = command.rfind('"') {
+            let before_output = &command[..last_quote];
+            if let Some(second_last_quote) = before_output.rfind('"') {
+                format!(
+                    "{} -progress pipe:2 {}",
+                    &command[..second_last_quote],
+                    &command[second_last_quote..]
+                )
+            } else {
+                command.clone()
+            }
+        } else {
+            command.clone()
+        }
+    } else {
+        command.clone()
+    };
+    println!("[FFMPEG] Command with progress: {}", command_with_progress);
     
     // Parse command into args (properly handling quoted paths)
-    let all_args = parse_shell_command(&command);
+    let all_args = parse_shell_command(&command_with_progress);
     println!("[FFMPEG] Parsed args count: {}", all_args.len());
     for (i, arg) in all_args.iter().enumerate() {
         println!("[FFMPEG]   arg[{}]: '{}'", i, arg);
@@ -733,6 +756,7 @@ pub async fn execute_ffmpeg_command(
         let mut current_frame: i64 = 0;
         let mut current_fps: f64 = 0.0;
         let mut current_time = String::new();
+        let mut current_time_secs: f64 = 0.0;
         let mut current_size = String::new();
         let mut current_speed = String::new();
         let mut error_lines: Vec<String> = Vec::new();
@@ -746,18 +770,36 @@ pub async fn execute_ffmpeg_command(
                 error_lines.push(line.clone());
             }
             
-            // Parse progress output
+            // Parse progress output (handle both "key=value" and "key= value" formats)
             if line.starts_with("frame=") {
                 if let Some(val) = line.strip_prefix("frame=") {
-                    current_frame = val.trim().parse().unwrap_or(0);
+                    // Handle "frame= 3944" format (space after =)
+                    current_frame = val.trim().split_whitespace().next()
+                        .and_then(|s| s.parse().ok())
+                        .unwrap_or(current_frame);
                 }
             } else if line.starts_with("fps=") {
                 if let Some(val) = line.strip_prefix("fps=") {
-                    current_fps = val.trim().parse().unwrap_or(0.0);
+                    current_fps = val.trim().split_whitespace().next()
+                        .and_then(|s| s.parse().ok())
+                        .unwrap_or(current_fps);
+                }
+            } else if line.starts_with("out_time_us=") {
+                // out_time_us is in microseconds, more accurate for progress
+                if let Some(val) = line.strip_prefix("out_time_us=") {
+                    if let Ok(us) = val.trim().parse::<i64>() {
+                        current_time_secs = us as f64 / 1_000_000.0;
+                    }
                 }
             } else if line.starts_with("out_time=") {
                 if let Some(val) = line.strip_prefix("out_time=") {
-                    current_time = val.trim().to_string();
+                    // Trim microseconds: "00:01:05.050000" -> "00:01:05"
+                    let time_str = val.trim();
+                    current_time = if let Some(dot_pos) = time_str.find('.') {
+                        time_str[..dot_pos].to_string()
+                    } else {
+                        time_str.to_string()
+                    };
                 }
             } else if line.starts_with("total_size=") {
                 if let Some(val) = line.strip_prefix("total_size=") {
@@ -769,11 +811,18 @@ pub async fn execute_ffmpeg_command(
                     current_speed = val.trim().to_string();
                 }
             } else if line == "progress=continue" || line == "progress=end" {
-                let percent = if total_frames > 0 {
+                // Use time-based progress (more reliable than frame-based)
+                let percent = if total_duration_secs > 0.0 && current_time_secs > 0.0 {
+                    (current_time_secs / total_duration_secs * 100.0).min(100.0)
+                } else if total_frames > 0 && current_frame > 0 {
+                    // Fallback to frame-based
                     (current_frame as f64 / total_frames as f64 * 100.0).min(100.0)
                 } else {
                     0.0
                 };
+                
+                println!("[FFMPEG PROGRESS] time_secs={}, duration={}, percent={:.1}%", 
+                    current_time_secs, total_duration_secs, percent);
                 
                 let progress = ProcessingProgress {
                     job_id: job_id_clone.clone(),

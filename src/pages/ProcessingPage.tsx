@@ -1,6 +1,6 @@
 import { Clock, FileDown, Film, History, Maximize2, Music, Wand2, Zap } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { ChatPanel, HistoryDialog, ProcessingOverlay, VideoPlayer } from '@/components/processing';
+import { ChatPanel, HistoryDialog, VideoPlayer } from '@/components/processing';
 import { ThemePicker } from '@/components/settings/ThemePicker';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -91,10 +91,6 @@ export function ProcessingPage() {
                 selection={selection}
                 onSelectVideo={selectVideo}
               />
-              {/* Processing Overlay - separate from VideoPlayer to prevent re-renders */}
-              {isProcessing && progress && (
-                <ProcessingOverlay progress={progress} onCancel={cancelProcessing} />
-              )}
             </div>
 
             {/* Metadata Bar */}
@@ -155,8 +151,10 @@ export function ProcessingPage() {
             messages={messages}
             isGenerating={isGenerating}
             isProcessing={isProcessing}
+            progress={progress}
             hasVideo={!!metadata && !!videoPath}
             onSendMessage={sendMessage}
+            onCancelProcessing={cancelProcessing}
           />
         </div>
 

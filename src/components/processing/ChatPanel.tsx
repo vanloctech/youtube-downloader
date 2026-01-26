@@ -1,9 +1,9 @@
 import { revealItemInDir } from '@tauri-apps/plugin-opener';
-import { Check, FolderOpen, Lightbulb, Loader2, Send, Wand2 } from 'lucide-react';
+import { Check, FolderOpen, Lightbulb, Loader2, Send, Square, Wand2 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import type { ChatMessage } from '@/lib/types';
+import type { ChatMessage, ProcessingProgress } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
 // Prompt suggestions for chat
@@ -24,16 +24,20 @@ export interface ChatPanelProps {
   messages: ChatMessage[];
   isGenerating: boolean;
   isProcessing: boolean;
+  progress: ProcessingProgress | null;
   hasVideo: boolean;
   onSendMessage: (message: string) => Promise<void>;
+  onCancelProcessing: () => void;
 }
 
 export function ChatPanel({
   messages,
   isGenerating,
   isProcessing,
+  progress,
   hasVideo,
   onSendMessage,
+  onCancelProcessing,
 }: ChatPanelProps) {
   const [inputMessage, setInputMessage] = useState('');
   const [isInputFocused, setIsInputFocused] = useState(false);
@@ -212,11 +216,68 @@ export function ChatPanel({
               </div>
             ))
           )}
-          {(isGenerating || isProcessing) && (
+          {isGenerating && (
             <div className="flex justify-start">
               <div className="inline-flex items-center gap-2 text-muted-foreground text-sm p-3 bg-muted/80 border border-border/50 rounded-xl rounded-bl-sm animate-in fade-in slide-in-from-bottom-2 duration-200">
                 <Loader2 className="w-4 h-4 animate-spin text-primary" />
-                <span>{isProcessing ? 'Processing...' : 'Generating...'}</span>
+                <span>Generating...</span>
+              </div>
+            </div>
+          )}
+          {isProcessing && progress && (
+            <div className="flex justify-start">
+              <div className="flex flex-col gap-3 p-3 bg-muted/80 border border-border/50 rounded-xl rounded-bl-sm animate-in fade-in slide-in-from-bottom-2 duration-200 min-w-[200px] max-w-[85%]">
+                {/* Header */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                    <span className="text-sm font-medium">Processing...</span>
+                  </div>
+                  <span className="text-sm font-semibold text-primary">
+                    {progress.percent.toFixed(0)}%
+                  </span>
+                </div>
+
+                {/* Progress Bar */}
+                <div className="relative h-2 bg-muted rounded-full overflow-hidden">
+                  <div
+                    className="absolute inset-y-0 left-0 bg-gradient-to-r from-primary to-primary/80 rounded-full transition-all duration-300 ease-out"
+                    style={{ width: `${Math.min(progress.percent, 100)}%` }}
+                  />
+                  <div
+                    className="absolute inset-y-0 left-0 bg-gradient-to-r from-white/20 to-transparent rounded-full animate-pulse"
+                    style={{ width: `${Math.min(progress.percent, 100)}%` }}
+                  />
+                </div>
+
+                {/* Stats */}
+                <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                  {progress.speed && (
+                    <span className="flex items-center gap-1">
+                      <span className="text-foreground font-medium">{progress.speed}</span>
+                    </span>
+                  )}
+                  {progress.time && (
+                    <span className="flex items-center gap-1">
+                      <span className="text-foreground font-medium">{progress.time}</span>
+                    </span>
+                  )}
+                  {progress.size && (
+                    <span className="flex items-center gap-1">
+                      <span className="text-foreground font-medium">{progress.size}</span>
+                    </span>
+                  )}
+                </div>
+
+                {/* Cancel Button */}
+                <button
+                  type="button"
+                  onClick={onCancelProcessing}
+                  className="flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium text-destructive hover:text-destructive-foreground hover:bg-destructive/90 bg-destructive/10 border border-destructive/20 rounded-lg transition-colors w-fit"
+                >
+                  <Square className="w-3 h-3" />
+                  Cancel
+                </button>
               </div>
             </div>
           )}
