@@ -19,11 +19,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Embed Metadata: Add title, artist, description to files (enabled by default)
   - Embed Thumbnail: Add cover art/thumbnail to files (enabled by default, requires FFmpeg)
 
+### Changed
+- Processing progress now shows in chat panel instead of blocking video player
+- Renamed AI Assistant to "Youwee" in processing chat
+
 ### Fixed
 - AI error message "AI Features is disabled" no longer shows when download fails (Windows)
 - Summarize button now hidden when AI features disabled
 - Summarize button hidden on failed download items to prevent confusion
 - Embed thumbnail now converts to JPG for better MP4 compatibility (fixes "Encoder not found" error)
+- yt-dlp version now correctly shows updated version after update
+- FFmpeg/Bun/yt-dlp now shows "Up to date" after successful update
+- Processing progress bar now works correctly using time-based calculation
+- Chat panel auto-scrolls to latest message
 
 
 ## [0.4.1] - 2026-01-24
