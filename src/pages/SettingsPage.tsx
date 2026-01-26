@@ -389,11 +389,6 @@ export function SettingsPage() {
                             Not found
                           </Badge>
                         )}
-                        {ffmpegUpdateInfo?.has_update && (
-                          <Badge variant="default" className="text-xs bg-primary">
-                            Update available
-                          </Badge>
-                        )}
                       </div>
                       <p className="text-xs text-muted-foreground mt-0.5">
                         {ffmpegDownloading ? (
@@ -414,8 +409,10 @@ export function SettingsPage() {
                           <span className="text-destructive">{ffmpegError}</span>
                         ) : ffmpegUpdateInfo?.has_update ? (
                           <span className="text-primary">
-                            New version: {ffmpegUpdateInfo.latest_version}
+                            {ffmpegUpdateInfo.latest_version} available
                           </span>
+                        ) : ffmpegUpdateInfo && !ffmpegUpdateInfo.has_update ? (
+                          <span className="text-emerald-500">Up to date</span>
                         ) : !ffmpegStatus?.installed ? (
                           <span className="text-amber-500">Required for 2K/4K/8K videos</span>
                         ) : ffmpegStatus?.is_system ? (
@@ -453,7 +450,8 @@ export function SettingsPage() {
                         ffmpegLoading ||
                         ffmpegDownloading ||
                         ffmpegCheckingUpdate ||
-                        !ffmpegStatus?.installed
+                        !ffmpegStatus?.installed ||
+                        ffmpegStatus?.is_system
                       }
                       title="Check for updates"
                     >
@@ -498,11 +496,6 @@ export function SettingsPage() {
                             Optional
                           </Badge>
                         )}
-                        {bunUpdateInfo?.has_update && (
-                          <Badge variant="default" className="text-xs bg-primary">
-                            Update available
-                          </Badge>
-                        )}
                       </div>
                       <p className="text-xs text-muted-foreground mt-0.5">
                         {bunDownloading ? (
@@ -523,8 +516,10 @@ export function SettingsPage() {
                           <span className="text-destructive">{bunError}</span>
                         ) : bunUpdateInfo?.has_update ? (
                           <span className="text-primary">
-                            New version: {bunUpdateInfo.latest_version}
+                            {bunUpdateInfo.latest_version} available
                           </span>
+                        ) : bunUpdateInfo && !bunUpdateInfo.has_update ? (
+                          <span className="text-emerald-500">Up to date</span>
                         ) : !bunStatus?.installed ? (
                           <span className="text-amber-500">
                             Enable in download settings if only 360p available
@@ -553,7 +548,11 @@ export function SettingsPage() {
                       size="icon"
                       onClick={checkBunUpdate}
                       disabled={
-                        bunLoading || bunDownloading || bunCheckingUpdate || !bunStatus?.installed
+                        bunLoading ||
+                        bunDownloading ||
+                        bunCheckingUpdate ||
+                        !bunStatus?.installed ||
+                        bunStatus?.is_system
                       }
                       title="Check for updates"
                     >

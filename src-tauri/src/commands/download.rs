@@ -19,7 +19,7 @@ use crate::database::add_log_internal;
 use crate::database::add_history_internal;
 use crate::database::update_history_download;
 use crate::utils::{build_format_string, parse_progress, format_size, sanitize_output_path};
-use crate::services::{get_ffmpeg_path, get_bun_path};
+use crate::services::{get_ffmpeg_path, get_bun_path, get_ytdlp_path};
 
 pub static CANCEL_FLAG: AtomicBool = AtomicBool::new(false);
 
@@ -206,6 +206,19 @@ pub async fn download_video(
     let command_str = format!("yt-dlp {}", args.join(" "));
     add_log_internal("command", &command_str, None, Some(&url)).ok();
     
+    // Try to get yt-dlp path (prioritizes user-updated version)
+    if let Some((binary_path, _)) = get_ytdlp_path(&app).await {
+        let process = Command::new(&binary_path)
+            .args(&args)
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()
+            .map_err(|e| format!("Failed to start yt-dlp: {}", e))?;
+        
+        return handle_tokio_download(app, id, process, quality, format, url, should_log_stderr).await;
+    }
+    
+    // Fallback to sidecar
     let sidecar_result = app.shell().sidecar("yt-dlp");
     
     match sidecar_result {

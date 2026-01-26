@@ -12,9 +12,8 @@ import {
 } from 'lucide-react';
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
 import { Slider } from '@/components/ui/slider';
-import type { ProcessingProgress, TimelineSelection, VideoMetadata } from '@/lib/types';
+import type { TimelineSelection, VideoMetadata } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
 export interface VideoPlayerProps {
@@ -24,11 +23,8 @@ export interface VideoPlayerProps {
   isLoadingVideo: boolean;
   isGeneratingPreview: boolean;
   isUsingPreview: boolean;
-  isProcessing: boolean;
-  progress: ProcessingProgress | null;
   selection: TimelineSelection | null;
   onSelectVideo: () => void;
-  onCancelProcessing: () => void;
 }
 
 export const VideoPlayer = memo(function VideoPlayer({
@@ -38,11 +34,8 @@ export const VideoPlayer = memo(function VideoPlayer({
   isLoadingVideo,
   isGeneratingPreview,
   isUsingPreview,
-  isProcessing,
-  progress,
   selection,
   onSelectVideo,
-  onCancelProcessing,
 }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const hideTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -308,21 +301,6 @@ export const VideoPlayer = memo(function VideoPlayer({
               </div>
             </div>
           </div>
-
-          {/* Processing Overlay */}
-          {isProcessing && progress && (
-            <div className="absolute inset-0 bg-black/80 flex flex-col items-center justify-center gap-3">
-              <Loader2 className="w-10 h-10 animate-spin text-primary" />
-              <div className="text-center text-white">
-                <p className="font-medium">{progress.percent.toFixed(0)}%</p>
-                <p className="text-xs text-white/60">{progress.speed}</p>
-              </div>
-              <Progress value={progress.percent} className="w-48" />
-              <Button variant="destructive" size="sm" onClick={onCancelProcessing}>
-                Cancel
-              </Button>
-            </div>
-          )}
         </>
       ) : (
         <div className="flex flex-col items-center gap-4 text-muted-foreground p-8">

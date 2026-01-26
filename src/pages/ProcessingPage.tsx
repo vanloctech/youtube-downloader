@@ -1,6 +1,6 @@
 import { Clock, FileDown, Film, History, Maximize2, Music, Wand2, Zap } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { ChatPanel, HistoryDialog, VideoPlayer } from '@/components/processing';
+import { ChatPanel, HistoryDialog, ProcessingOverlay, VideoPlayer } from '@/components/processing';
 import { ThemePicker } from '@/components/settings/ThemePicker';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -78,20 +78,24 @@ export function ProcessingPage() {
         <div className="flex-1 flex overflow-hidden">
           {/* Left: Video + Controls */}
           <div className="w-[70%] flex flex-col p-4 sm:p-6 gap-4 overflow-hidden">
-            {/* Memoized Video Player - prevents re-renders from chat/processing state changes */}
-            <VideoPlayer
-              videoSrc={videoSrc}
-              videoPath={videoPath}
-              metadata={metadata}
-              isLoadingVideo={isLoadingVideo}
-              isGeneratingPreview={isGeneratingPreview}
-              isUsingPreview={isUsingPreview}
-              isProcessing={isProcessing}
-              progress={progress}
-              selection={selection}
-              onSelectVideo={selectVideo}
-              onCancelProcessing={cancelProcessing}
-            />
+            {/* Video Player Container with Processing Overlay */}
+            <div className="relative">
+              {/* Memoized Video Player - no longer receives processing state */}
+              <VideoPlayer
+                videoSrc={videoSrc}
+                videoPath={videoPath}
+                metadata={metadata}
+                isLoadingVideo={isLoadingVideo}
+                isGeneratingPreview={isGeneratingPreview}
+                isUsingPreview={isUsingPreview}
+                selection={selection}
+                onSelectVideo={selectVideo}
+              />
+              {/* Processing Overlay - separate from VideoPlayer to prevent re-renders */}
+              {isProcessing && progress && (
+                <ProcessingOverlay progress={progress} onCancel={cancelProcessing} />
+              )}
+            </div>
 
             {/* Metadata Bar */}
             {metadata && (

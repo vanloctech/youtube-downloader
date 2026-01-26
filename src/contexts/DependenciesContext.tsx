@@ -167,7 +167,13 @@ export function DependenciesProvider({ children }: { children: ReactNode }) {
         is_system: false,
       });
       setFfmpegSuccess(true);
-      setFfmpegUpdateInfo(null); // Clear update info after successful download
+      // Set update info to show "Up to date" instead of null
+      setFfmpegUpdateInfo({
+        has_update: false,
+        current_version: version,
+        latest_version: version,
+        release_url: null,
+      });
       // Hide success message after 3 seconds
       setTimeout(() => setFfmpegSuccess(false), 3000);
       // Refresh to get full status
@@ -221,7 +227,13 @@ export function DependenciesProvider({ children }: { children: ReactNode }) {
         is_system: false,
       });
       setBunSuccess(true);
-      setBunUpdateInfo(null); // Clear update info after successful download
+      // Set update info to show "Up to date" instead of null
+      setBunUpdateInfo({
+        has_update: false,
+        current_version: version,
+        latest_version: version,
+        release_url: null,
+      });
       // Hide success message after 3 seconds
       setTimeout(() => setBunSuccess(false), 3000);
       // Refresh to get full status
@@ -266,7 +278,8 @@ export function DependenciesProvider({ children }: { children: ReactNode }) {
     try {
       const newVersion = await invoke<string>('update_ytdlp');
       setYtdlpInfo((prev) => (prev ? { ...prev, version: newVersion } : null));
-      setLatestVersion(null);
+      // Keep latestVersion same as newVersion to show "Up to date"
+      setLatestVersion(newVersion);
       setUpdateSuccess(true);
       // Hide success message after 3 seconds
       setTimeout(() => setUpdateSuccess(false), 3000);
