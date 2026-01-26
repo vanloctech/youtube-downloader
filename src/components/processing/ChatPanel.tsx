@@ -42,8 +42,10 @@ export function ChatPanel({
 
   // Auto-scroll to bottom when messages change
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, []);
+    if (messages.length > 0) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages]);
 
   const handleSelectSuggestion = (prompt: string) => {
     setInputMessage(prompt);
@@ -68,7 +70,7 @@ export function ChatPanel({
               <Wand2 className="w-4 h-4 text-primary" />
             </div>
             <div>
-              <h3 className="font-semibold text-sm">AI Assistant</h3>
+              <h3 className="font-semibold text-sm">Youwee</h3>
               <p className="text-xs text-muted-foreground">Describe your edit</p>
             </div>
           </div>
@@ -155,25 +157,28 @@ export function ChatPanel({
                   msg.role === 'user' && 'justify-end',
                   msg.role === 'assistant' && 'justify-start',
                   msg.role === 'system' && 'justify-center',
-                  msg.role === 'complete' && 'justify-center',
+                  msg.role === 'complete' && 'justify-start',
                 )}
               >
                 {msg.role === 'complete' ? (
                   // Complete message with Open Folder button
-                  <div className="inline-flex items-center gap-2 p-2 px-3 rounded-xl bg-green-500/10 border border-green-500/20 animate-in fade-in slide-in-from-bottom-2 duration-200">
-                    <div className="w-5 h-5 rounded-full bg-green-500/20 flex items-center justify-center flex-shrink-0">
-                      <Check className="w-3 h-3 text-green-500" />
+                  <div className="flex flex-col gap-2 p-3 rounded-xl rounded-bl-sm bg-green-500/10 border border-green-500/20 animate-in fade-in slide-in-from-bottom-2 duration-200 max-w-[85%]">
+                    <div className="flex items-center gap-2">
+                      <div className="w-5 h-5 rounded-full bg-green-500/20 flex items-center justify-center flex-shrink-0">
+                        <Check className="w-3 h-3 text-green-500" />
+                      </div>
+                      <span className="text-xs text-muted-foreground">Complete</span>
                     </div>
-                    <span className="text-xs text-muted-foreground max-w-[120px] truncate">
+                    <p className="text-sm text-foreground [overflow-wrap:anywhere]">
                       {msg.content}
-                    </span>
+                    </p>
                     <button
                       type="button"
-                      className="flex items-center gap-1 text-xs font-medium text-green-600 dark:text-green-400 hover:underline flex-shrink-0"
+                      className="flex items-center gap-1 text-xs font-medium text-green-600 dark:text-green-400 hover:underline w-fit"
                       onClick={() => msg.outputPath && revealItemInDir(msg.outputPath)}
                     >
                       <FolderOpen className="w-3 h-3" />
-                      Open
+                      Open in Folder
                     </button>
                   </div>
                 ) : (
@@ -191,7 +196,7 @@ export function ChatPanel({
                     {msg.role === 'assistant' && (
                       <div className="flex items-center gap-1.5 mb-1.5 text-xs text-muted-foreground">
                         <Wand2 className="w-3 h-3" />
-                        <span>AI</span>
+                        <span>Youwee</span>
                       </div>
                     )}
                     <p
@@ -208,8 +213,8 @@ export function ChatPanel({
             ))
           )}
           {(isGenerating || isProcessing) && (
-            <div className="flex justify-center">
-              <div className="inline-flex items-center gap-2 text-muted-foreground text-sm py-2 px-4 bg-muted/50 rounded-full">
+            <div className="flex justify-start">
+              <div className="inline-flex items-center gap-2 text-muted-foreground text-sm p-3 bg-muted/80 border border-border/50 rounded-xl rounded-bl-sm animate-in fade-in slide-in-from-bottom-2 duration-200">
                 <Loader2 className="w-4 h-4 animate-spin text-primary" />
                 <span>{isProcessing ? 'Processing...' : 'Generating...'}</span>
               </div>

@@ -359,8 +359,6 @@ export function ProcessingProvider({ children }: { children: ReactNode }) {
           ffmpegCommand: result.command,
         });
 
-        addMessage('system', 'Processing...');
-
         await invoke('execute_ffmpeg_command', {
           jobId,
           command: result.command,
@@ -463,8 +461,6 @@ export function ProcessingProvider({ children }: { children: ReactNode }) {
           userPrompt: messages.find((m) => m.role === 'user')?.content ?? null,
           ffmpegCommand: cmdToExecute.command,
         });
-
-        addMessage('system', 'Processing...');
 
         await invoke('execute_ffmpeg_command', {
           jobId,
