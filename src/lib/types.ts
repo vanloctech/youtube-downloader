@@ -6,9 +6,18 @@ export type SubtitleMode = 'off' | 'auto' | 'manual';
 export type SubtitleFormat = 'srt' | 'vtt' | 'ass';
 
 // Source platforms supported by yt-dlp
-export type SourcePlatform = 
-  | 'youtube' | 'tiktok' | 'instagram' | 'twitter' | 'facebook' 
-  | 'vimeo' | 'twitch' | 'bilibili' | 'soundcloud' | 'dailymotion' | 'other';
+export type SourcePlatform =
+  | 'youtube'
+  | 'tiktok'
+  | 'instagram'
+  | 'twitter'
+  | 'facebook'
+  | 'vimeo'
+  | 'twitch'
+  | 'bilibili'
+  | 'soundcloud'
+  | 'dailymotion'
+  | 'other';
 
 // Settings snapshot saved with each queue item (YouTube page)
 export interface ItemDownloadSettings {
@@ -189,7 +198,14 @@ export interface HistoryEntry {
   summary?: string; // AI-generated summary
 }
 
-export type HistoryFilter = 'all' | 'youtube' | 'tiktok' | 'facebook' | 'instagram' | 'twitter' | 'other';
+export type HistoryFilter =
+  | 'all'
+  | 'youtube'
+  | 'tiktok'
+  | 'facebook'
+  | 'instagram'
+  | 'twitter'
+  | 'other';
 export type HistorySort = 'recent' | 'oldest' | 'title' | 'size';
 
 // AI types
@@ -218,8 +234,8 @@ export interface CookieSettings {
 }
 
 export interface BrowserProfile {
-  folder_name: string;   // Used for yt-dlp: "Profile 1"
-  display_name: string;  // Shown to user: "Loc Nguyen"
+  folder_name: string; // Used for yt-dlp: "Profile 1"
+  display_name: string; // Shown to user: "Loc Nguyen"
 }
 
 export interface AIConfig {
@@ -271,13 +287,32 @@ export interface LanguageOption {
 // Video Processing Types
 // ============================================
 
-export type ProcessingStatus = 'idle' | 'generating' | 'ready' | 'processing' | 'completed' | 'error';
+export type ProcessingStatus =
+  | 'idle'
+  | 'generating'
+  | 'ready'
+  | 'processing'
+  | 'completed'
+  | 'error';
 
-export type ProcessingTaskType = 
-  | 'cut' | 'extract_audio' | 'resize' | 'convert' 
-  | 'burn_subtitles' | 'thumbnail' | 'gif' | 'speed' 
-  | 'volume' | 'remove_audio' | 'merge' | 'compress'
-  | 'rotate' | 'flip' | 'crop' | 'watermark' | 'custom';
+export type ProcessingTaskType =
+  | 'cut'
+  | 'extract_audio'
+  | 'resize'
+  | 'convert'
+  | 'burn_subtitles'
+  | 'thumbnail'
+  | 'gif'
+  | 'speed'
+  | 'volume'
+  | 'remove_audio'
+  | 'merge'
+  | 'compress'
+  | 'rotate'
+  | 'flip'
+  | 'crop'
+  | 'watermark'
+  | 'custom';
 
 export interface VideoMetadata {
   path: string;
@@ -367,15 +402,63 @@ export interface QuickAction {
 
 export const QUICK_ACTIONS: QuickAction[] = [
   { id: 'cut', icon: '✂️', label: 'Cut/Trim', description: 'Cut video using timeline selection' },
-  { id: 'extract_audio', icon: '🎵', label: 'Extract Audio', description: 'Extract audio track', needsInput: 'format' },
-  { id: 'resize', icon: '📐', label: 'Resize', description: 'Change video resolution', needsInput: 'resolution' },
-  { id: 'convert', icon: '🔄', label: 'Convert', description: 'Convert to different format', needsInput: 'format' },
-  { id: 'burn_subtitles', icon: '📝', label: 'Burn Subtitles', description: 'Burn subtitles into video', needsInput: 'file' },
-  { id: 'thumbnail', icon: '🖼️', label: 'Thumbnail', description: 'Extract frame as image', needsInput: 'timestamp' },
-  { id: 'gif', icon: '🎞️', label: 'Create GIF', description: 'Create GIF from selection', needsInput: 'range' },
-  { id: 'speed', icon: '⚡', label: 'Speed', description: 'Change playback speed', needsInput: 'speed' },
+  {
+    id: 'extract_audio',
+    icon: '🎵',
+    label: 'Extract Audio',
+    description: 'Extract audio track',
+    needsInput: 'format',
+  },
+  {
+    id: 'resize',
+    icon: '📐',
+    label: 'Resize',
+    description: 'Change video resolution',
+    needsInput: 'resolution',
+  },
+  {
+    id: 'convert',
+    icon: '🔄',
+    label: 'Convert',
+    description: 'Convert to different format',
+    needsInput: 'format',
+  },
+  {
+    id: 'burn_subtitles',
+    icon: '📝',
+    label: 'Burn Subtitles',
+    description: 'Burn subtitles into video',
+    needsInput: 'file',
+  },
+  {
+    id: 'thumbnail',
+    icon: '🖼️',
+    label: 'Thumbnail',
+    description: 'Extract frame as image',
+    needsInput: 'timestamp',
+  },
+  {
+    id: 'gif',
+    icon: '🎞️',
+    label: 'Create GIF',
+    description: 'Create GIF from selection',
+    needsInput: 'range',
+  },
+  {
+    id: 'speed',
+    icon: '⚡',
+    label: 'Speed',
+    description: 'Change playback speed',
+    needsInput: 'speed',
+  },
   { id: 'compress', icon: '📦', label: 'Compress', description: 'Reduce file size' },
   { id: 'remove_audio', icon: '🔇', label: 'Remove Audio', description: 'Remove audio track' },
   { id: 'rotate', icon: '🔃', label: 'Rotate', description: 'Rotate video 90°/180°/270°' },
-  { id: 'merge', icon: '🔀', label: 'Merge', description: 'Merge multiple videos', needsInput: 'file' },
+  {
+    id: 'merge',
+    icon: '🔀',
+    label: 'Merge',
+    description: 'Merge multiple videos',
+    needsInput: 'file',
+  },
 ];

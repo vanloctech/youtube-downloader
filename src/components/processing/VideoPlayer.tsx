@@ -1,21 +1,21 @@
-import { useState, useRef, useEffect, memo, useCallback } from 'react';
-import { cn } from '@/lib/utils';
+import {
+  Eye,
+  Film,
+  Loader2,
+  Pause,
+  Play,
+  SkipBack,
+  SkipForward,
+  Upload,
+  Volume2,
+  VolumeX,
+} from 'lucide-react';
+import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Slider } from '@/components/ui/slider';
-import {
-  Upload,
-  Play,
-  Pause,
-  SkipBack,
-  SkipForward,
-  Volume2,
-  VolumeX,
-  Film,
-  Loader2,
-  Eye,
-} from 'lucide-react';
-import type { TimelineSelection, VideoMetadata, ProcessingProgress } from '@/lib/types';
+import type { ProcessingProgress, TimelineSelection, VideoMetadata } from '@/lib/types';
+import { cn } from '@/lib/utils';
 
 export interface VideoPlayerProps {
   videoSrc: string | null;
@@ -128,7 +128,7 @@ export const VideoPlayer = memo(function VideoPlayer({
   }, []);
 
   const formatTime = (seconds: number): string => {
-    if (!seconds || !isFinite(seconds)) return '0:00';
+    if (!seconds || !Number.isFinite(seconds)) return '0:00';
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
     return `${mins}:${secs.toString().padStart(2, '0')}`;
@@ -137,20 +137,25 @@ export const VideoPlayer = memo(function VideoPlayer({
   const videoAspectRatio = metadata ? metadata.width / metadata.height : 16 / 9;
 
   return (
-    <div
+    <section
       className={cn(
-        "relative rounded-xl overflow-hidden w-full",
-        "bg-black",
-        !videoSrc && "aspect-video flex items-center justify-center border border-white/10",
-        videoSrc && !showControls && "cursor-none"
+        'relative rounded-xl overflow-hidden w-full',
+        'bg-black',
+        !videoSrc && 'aspect-video flex items-center justify-center border border-white/10',
+        videoSrc && !showControls && 'cursor-none',
       )}
-      style={videoSrc ? { 
-        aspectRatio: videoAspectRatio,
-        maxHeight: '70vh'
-      } : undefined}
+      style={
+        videoSrc
+          ? {
+              aspectRatio: videoAspectRatio,
+              maxHeight: '70vh',
+            }
+          : undefined
+      }
       onMouseMove={resetHideTimer}
       onMouseEnter={resetHideTimer}
       onMouseLeave={() => isPlaying && setShowControls(false)}
+      aria-label="Video player"
     >
       {isLoadingVideo || isGeneratingPreview ? (
         <div className="flex flex-col items-center gap-3 text-white/70">
@@ -168,15 +173,17 @@ export const VideoPlayer = memo(function VideoPlayer({
             onPlay={() => setIsPlaying(true)}
             onPause={() => setIsPlaying(false)}
             onClick={handlePlayPause}
-          />
+          >
+            <track kind="captions" src="data:text/vtt,WEBVTT" srcLang="en" label="English" />
+          </video>
 
           {/* Top bar with video title */}
           <div
             className={cn(
-              "absolute inset-x-0 top-0 p-3 pb-8",
-              "bg-gradient-to-b from-black/70 to-transparent",
-              "transition-opacity duration-300 flex items-start justify-between",
-              showControls ? "opacity-100" : "opacity-0"
+              'absolute inset-x-0 top-0 p-3 pb-8',
+              'bg-gradient-to-b from-black/70 to-transparent',
+              'transition-opacity duration-300 flex items-start justify-between',
+              showControls ? 'opacity-100' : 'opacity-0',
             )}
           >
             {videoPath && (
@@ -215,10 +222,10 @@ export const VideoPlayer = memo(function VideoPlayer({
           {/* Video Controls Overlay */}
           <div
             className={cn(
-              "absolute inset-x-0 bottom-0 p-3 pt-12",
-              "bg-gradient-to-t from-black/80 via-black/40 to-transparent",
-              "transition-opacity duration-300",
-              showControls ? "opacity-100" : "opacity-0"
+              'absolute inset-x-0 bottom-0 p-3 pt-12',
+              'bg-gradient-to-t from-black/80 via-black/40 to-transparent',
+              'transition-opacity duration-300',
+              showControls ? 'opacity-100' : 'opacity-0',
             )}
           >
             {/* Timeline */}
@@ -332,6 +339,6 @@ export const VideoPlayer = memo(function VideoPlayer({
           </Button>
         </div>
       )}
-    </div>
+    </section>
   );
 });

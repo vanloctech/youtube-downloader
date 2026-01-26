@@ -1,22 +1,11 @@
-import { useState, useEffect } from 'react';
-import { useProcessing } from '@/contexts/ProcessingContext';
+import { Clock, FileDown, Film, History, Maximize2, Music, Wand2, Zap } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { ChatPanel, HistoryDialog, VideoPlayer } from '@/components/processing';
 import { ThemePicker } from '@/components/settings/ThemePicker';
-import { VideoPlayer, HistoryDialog, ChatPanel } from '@/components/processing';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import {
-  TooltipProvider,
-} from '@/components/ui/tooltip';
-import {
-  Wand2,
-  History,
-  Maximize2,
-  Film,
-  Music,
-  Clock,
-  FileDown,
-  Zap,
-} from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { TooltipProvider } from '@/components/ui/tooltip';
+import { useProcessing } from '@/contexts/ProcessingContext';
 
 export function ProcessingPage() {
   // Get state and actions from context (persistent across navigation)
@@ -49,7 +38,7 @@ export function ProcessingPage() {
   }, [loadHistory]);
 
   const formatTime = (seconds: number): string => {
-    if (!seconds || !isFinite(seconds)) return '0:00';
+    if (!seconds || !Number.isFinite(seconds)) return '0:00';
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
     return `${mins}:${secs.toString().padStart(2, '0')}`;
@@ -112,7 +101,9 @@ export function ProcessingPage() {
                     <div className="w-5 h-5 rounded bg-muted/50 flex items-center justify-center">
                       <Maximize2 className="w-3 h-3 text-muted-foreground" />
                     </div>
-                    <span className="text-muted-foreground">{metadata.width}×{metadata.height}</span>
+                    <span className="text-muted-foreground">
+                      {metadata.width}×{metadata.height}
+                    </span>
                   </div>
                   <div className="flex items-center gap-1.5 text-xs">
                     <div className="w-5 h-5 rounded bg-muted/50 flex items-center justify-center">
@@ -138,14 +129,18 @@ export function ProcessingPage() {
                     <div className="w-5 h-5 rounded bg-muted/50 flex items-center justify-center">
                       <FileDown className="w-3 h-3 text-muted-foreground" />
                     </div>
-                    <span className="text-muted-foreground">{(metadata.file_size / 1_000_000).toFixed(1)} MB</span>
+                    <span className="text-muted-foreground">
+                      {(metadata.file_size / 1_000_000).toFixed(1)} MB
+                    </span>
                   </div>
                   {metadata.frame_rate && (
                     <div className="flex items-center gap-1.5 text-xs">
                       <div className="w-5 h-5 rounded bg-muted/50 flex items-center justify-center">
                         <Zap className="w-3 h-3 text-muted-foreground" />
                       </div>
-                      <span className="text-muted-foreground">{metadata.frame_rate.toFixed(0)} fps</span>
+                      <span className="text-muted-foreground">
+                        {metadata.frame_rate.toFixed(0)} fps
+                      </span>
                     </div>
                   )}
                 </div>

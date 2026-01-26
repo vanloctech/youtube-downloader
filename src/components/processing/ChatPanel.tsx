@@ -1,21 +1,10 @@
-import { useState, useRef, useEffect } from 'react';
 import { revealItemInDir } from '@tauri-apps/plugin-opener';
-import { cn } from '@/lib/utils';
+import { Check, FolderOpen, Lightbulb, Loader2, Send, Wand2 } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
-import {
-  Send,
-  Wand2,
-  Check,
-  Loader2,
-  FolderOpen,
-  Lightbulb,
-} from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import type { ChatMessage } from '@/lib/types';
+import { cn } from '@/lib/utils';
 
 // Prompt suggestions for chat
 const promptSuggestions = [
@@ -54,7 +43,7 @@ export function ChatPanel({
   // Auto-scroll to bottom when messages change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, isGenerating, isProcessing]);
+  }, []);
 
   const handleSelectSuggestion = (prompt: string) => {
     setInputMessage(prompt);
@@ -83,7 +72,7 @@ export function ChatPanel({
               <p className="text-xs text-muted-foreground">Describe your edit</p>
             </div>
           </div>
-          
+
           {/* Suggestions Button */}
           <div className="relative">
             <Tooltip>
@@ -93,11 +82,11 @@ export function ChatPanel({
                   onClick={() => setShowSuggestions(!showSuggestions)}
                   disabled={!hasVideo || isProcessing || isGenerating}
                   className={cn(
-                    "h-8 w-8 rounded-lg flex items-center justify-center",
-                    "transition-all duration-200",
-                    "hover:bg-muted text-muted-foreground hover:text-foreground",
-                    "disabled:opacity-50 disabled:cursor-not-allowed",
-                    showSuggestions && "bg-muted text-foreground"
+                    'h-8 w-8 rounded-lg flex items-center justify-center',
+                    'transition-all duration-200',
+                    'hover:bg-muted text-muted-foreground hover:text-foreground',
+                    'disabled:opacity-50 disabled:cursor-not-allowed',
+                    showSuggestions && 'bg-muted text-foreground',
                   )}
                 >
                   <Lightbulb className="w-4 h-4" />
@@ -105,27 +94,28 @@ export function ChatPanel({
               </TooltipTrigger>
               <TooltipContent>Prompt Templates</TooltipContent>
             </Tooltip>
-            
+
             {/* Suggestions Dropdown */}
             {showSuggestions && (
-              <div className={cn(
-                "absolute top-full right-0 mt-2 w-64",
-                "bg-background/95 backdrop-blur-xl",
-                "border border-border/50 rounded-xl shadow-xl",
-                "p-2 z-50"
-              )}>
-                <div className="text-xs text-muted-foreground px-2 py-1 mb-1">
-                  Prompt Templates
-                </div>
+              <div
+                className={cn(
+                  'absolute top-full right-0 mt-2 w-64',
+                  'bg-background/95 backdrop-blur-xl',
+                  'border border-border/50 rounded-xl shadow-xl',
+                  'p-2 z-50',
+                )}
+              >
+                <div className="text-xs text-muted-foreground px-2 py-1 mb-1">Prompt Templates</div>
                 <div className="space-y-0.5 max-h-64 overflow-y-auto">
                   {promptSuggestions.map((suggestion) => (
                     <button
+                      type="button"
                       key={suggestion.id}
                       onClick={() => handleSelectSuggestion(suggestion.prompt)}
                       className={cn(
-                        "w-full text-left px-3 py-2 rounded-lg",
-                        "text-sm transition-colors",
-                        "hover:bg-muted/70 text-foreground"
+                        'w-full text-left px-3 py-2 rounded-lg',
+                        'text-sm transition-colors',
+                        'hover:bg-muted/70 text-foreground',
                       )}
                     >
                       <div className="font-medium">{suggestion.label}</div>
@@ -149,7 +139,9 @@ export function ChatPanel({
               <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center mb-3">
                 <Wand2 className="w-6 h-6 text-primary/60" />
               </div>
-              <p className="text-sm font-medium text-muted-foreground">What would you like to do?</p>
+              <p className="text-sm font-medium text-muted-foreground">
+                What would you like to do?
+              </p>
               <p className="text-xs text-muted-foreground/60 mt-1 max-w-[180px]">
                 Try "Cut from 1:00 to 2:00" or "Convert to 720p"
               </p>
@@ -159,11 +151,11 @@ export function ChatPanel({
               <div
                 key={msg.id}
                 className={cn(
-                  "flex",
-                  msg.role === 'user' && "justify-end",
-                  msg.role === 'assistant' && "justify-start",
-                  msg.role === 'system' && "justify-center",
-                  msg.role === 'complete' && "justify-center"
+                  'flex',
+                  msg.role === 'user' && 'justify-end',
+                  msg.role === 'assistant' && 'justify-start',
+                  msg.role === 'system' && 'justify-center',
+                  msg.role === 'complete' && 'justify-center',
                 )}
               >
                 {msg.role === 'complete' ? (
@@ -172,8 +164,11 @@ export function ChatPanel({
                     <div className="w-5 h-5 rounded-full bg-green-500/20 flex items-center justify-center flex-shrink-0">
                       <Check className="w-3 h-3 text-green-500" />
                     </div>
-                    <span className="text-xs text-muted-foreground max-w-[120px] truncate">{msg.content}</span>
+                    <span className="text-xs text-muted-foreground max-w-[120px] truncate">
+                      {msg.content}
+                    </span>
                     <button
+                      type="button"
                       className="flex items-center gap-1 text-xs font-medium text-green-600 dark:text-green-400 hover:underline flex-shrink-0"
                       onClick={() => msg.outputPath && revealItemInDir(msg.outputPath)}
                     >
@@ -184,11 +179,13 @@ export function ChatPanel({
                 ) : (
                   <div
                     className={cn(
-                      "rounded-xl text-sm animate-in fade-in slide-in-from-bottom-2 duration-200",
-                      "max-w-[85%]",
-                      msg.role === 'user' && "p-3 bg-primary text-primary-foreground rounded-br-sm",
-                      msg.role === 'assistant' && "p-3 bg-muted/80 border border-border/50 rounded-bl-sm",
-                      msg.role === 'system' && "text-xs text-muted-foreground py-1 px-3 bg-muted/30 rounded-full"
+                      'rounded-xl text-sm animate-in fade-in slide-in-from-bottom-2 duration-200',
+                      'max-w-[85%]',
+                      msg.role === 'user' && 'p-3 bg-primary text-primary-foreground rounded-br-sm',
+                      msg.role === 'assistant' &&
+                        'p-3 bg-muted/80 border border-border/50 rounded-bl-sm',
+                      msg.role === 'system' &&
+                        'text-xs text-muted-foreground py-1 px-3 bg-muted/30 rounded-full',
                     )}
                   >
                     {msg.role === 'assistant' && (
@@ -197,10 +194,14 @@ export function ChatPanel({
                         <span>AI</span>
                       </div>
                     )}
-                    <p className={cn(
-                      "whitespace-pre-wrap [overflow-wrap:anywhere]",
-                      msg.role === 'system' && "italic"
-                    )}>{msg.content}</p>
+                    <p
+                      className={cn(
+                        'whitespace-pre-wrap [overflow-wrap:anywhere]',
+                        msg.role === 'system' && 'italic',
+                      )}
+                    >
+                      {msg.content}
+                    </p>
                   </div>
                 )}
               </div>
@@ -221,32 +222,34 @@ export function ChatPanel({
 
       {/* Floating Input - Modern glass style */}
       <div className="flex-shrink-0 p-3 pt-0">
-        <div 
+        <div
           className={cn(
-            "relative flex items-end gap-2 p-2 rounded-2xl",
-            "bg-background/60 backdrop-blur-md",
-            "transition-all duration-300 ease-out",
+            'relative flex items-end gap-2 p-2 rounded-2xl',
+            'bg-background/60 backdrop-blur-md',
+            'transition-all duration-300 ease-out',
             // Default state
             !isInputFocused && [
-              "ring-1 ring-white/10 dark:ring-white/5",
-              "shadow-[0_4px_24px_-4px_rgba(0,0,0,0.1)] dark:shadow-[0_4px_24px_-4px_rgba(0,0,0,0.3)]",
-              "hover:shadow-[0_8px_32px_-4px_rgba(0,0,0,0.12)] dark:hover:shadow-[0_8px_32px_-4px_rgba(0,0,0,0.4)]"
+              'ring-1 ring-white/10 dark:ring-white/5',
+              'shadow-[0_4px_24px_-4px_rgba(0,0,0,0.1)] dark:shadow-[0_4px_24px_-4px_rgba(0,0,0,0.3)]',
+              'hover:shadow-[0_8px_32px_-4px_rgba(0,0,0,0.12)] dark:hover:shadow-[0_8px_32px_-4px_rgba(0,0,0,0.4)]',
             ],
             // Focused state - takes priority
             isInputFocused && [
-              "ring-2 ring-primary/30",
-              "shadow-[0_0_0_4px_hsl(var(--primary)/0.1),0_8px_32px_-4px_rgba(0,0,0,0.15)]"
-            ]
+              'ring-2 ring-primary/30',
+              'shadow-[0_0_0_4px_hsl(var(--primary)/0.1),0_8px_32px_-4px_rgba(0,0,0,0.15)]',
+            ],
           )}
         >
           {/* Subtle gradient overlay */}
-          <div className={cn(
-            "absolute inset-0 rounded-2xl pointer-events-none transition-opacity duration-300",
-            isInputFocused 
-              ? "bg-gradient-to-b from-primary/5 to-transparent opacity-100" 
-              : "bg-gradient-to-b from-white/5 to-transparent opacity-100"
-          )} />
-          
+          <div
+            className={cn(
+              'absolute inset-0 rounded-2xl pointer-events-none transition-opacity duration-300',
+              isInputFocused
+                ? 'bg-gradient-to-b from-primary/5 to-transparent opacity-100'
+                : 'bg-gradient-to-b from-white/5 to-transparent opacity-100',
+            )}
+          />
+
           <div className="relative flex-1 min-w-0">
             <textarea
               placeholder="Describe your edit..."
@@ -254,7 +257,7 @@ export function ChatPanel({
               onChange={(e) => {
                 setInputMessage(e.target.value);
                 e.target.style.height = 'auto';
-                e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px';
+                e.target.style.height = `${Math.min(e.target.scrollHeight, 120)}px`;
               }}
               onFocus={() => setIsInputFocused(true)}
               onBlur={() => setIsInputFocused(false)}
@@ -267,31 +270,34 @@ export function ChatPanel({
               disabled={!hasVideo || isProcessing || isGenerating}
               rows={1}
               className={cn(
-                "w-full resize-none bg-transparent border-0 outline-none",
-                "text-sm leading-relaxed py-2 px-3",
-                "placeholder:text-muted-foreground/40",
-                "disabled:opacity-50 disabled:cursor-not-allowed",
-                "max-h-[120px]"
+                'w-full resize-none bg-transparent border-0 outline-none',
+                'text-sm leading-relaxed py-2 px-3',
+                'placeholder:text-muted-foreground/40',
+                'disabled:opacity-50 disabled:cursor-not-allowed',
+                'max-h-[120px]',
               )}
               style={{ height: 'auto', minHeight: '40px' }}
             />
           </div>
-          
+
           <button
+            type="button"
             className={cn(
-              "relative flex-shrink-0 h-10 w-10 rounded-xl flex items-center justify-center",
-              "transition-all duration-300 ease-out",
+              'relative flex-shrink-0 h-10 w-10 rounded-xl flex items-center justify-center',
+              'transition-all duration-300 ease-out',
               inputMessage.trim() && hasVideo && !isProcessing && !isGenerating
-                ? "btn-gradient shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 hover:scale-105"
-                : "bg-muted/50 text-muted-foreground/30 hover:bg-muted/70 hover:text-muted-foreground/50"
+                ? 'btn-gradient shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 hover:scale-105'
+                : 'bg-muted/50 text-muted-foreground/30 hover:bg-muted/70 hover:text-muted-foreground/50',
             )}
             onClick={handleSendMessage}
             disabled={!inputMessage.trim() || !hasVideo || isProcessing || isGenerating}
           >
-            <Send className={cn(
-              "w-4 h-4 transition-transform duration-300",
-              inputMessage.trim() && "-rotate-45"
-            )} />
+            <Send
+              className={cn(
+                'w-4 h-4 transition-transform duration-300',
+                inputMessage.trim() && '-rotate-45',
+              )}
+            />
           </button>
         </div>
       </div>

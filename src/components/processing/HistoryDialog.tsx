@@ -1,29 +1,24 @@
-import { useState, useCallback } from 'react';
 import { revealItemInDir } from '@tauri-apps/plugin-opener';
-import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Badge } from '@/components/ui/badge';
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import {
-  Check,
   AlertCircle,
-  History,
-  FolderOpen,
-  FileVideo,
-  FileDown,
-  Terminal,
-  MessageSquare,
   Calendar,
-  Trash2,
+  Check,
   Copy,
+  FileDown,
+  FileVideo,
+  FolderOpen,
+  History,
+  MessageSquare,
+  Terminal,
+  Trash2,
 } from 'lucide-react';
+import { useCallback, useState } from 'react';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import type { ProcessingJob } from '@/lib/types';
+import { cn } from '@/lib/utils';
 
 export interface HistoryDialogProps {
   open: boolean;
@@ -60,11 +55,15 @@ export function HistoryDialog({ open, onOpenChange, history, onDelete }: History
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'completed':
-        return <Badge className="bg-green-500/10 text-green-500 border-green-500/20">Completed</Badge>;
+        return (
+          <Badge className="bg-green-500/10 text-green-500 border-green-500/20">Completed</Badge>
+        );
       case 'failed':
         return <Badge className="bg-red-500/10 text-red-500 border-red-500/20">Failed</Badge>;
       case 'cancelled':
-        return <Badge className="bg-yellow-500/10 text-yellow-500 border-yellow-500/20">Cancelled</Badge>;
+        return (
+          <Badge className="bg-yellow-500/10 text-yellow-500 border-yellow-500/20">Cancelled</Badge>
+        );
       default:
         return <Badge variant="secondary">{status}</Badge>;
     }
@@ -95,12 +94,13 @@ export function HistoryDialog({ open, onOpenChange, history, onDelete }: History
                 ) : (
                   history.map((job) => (
                     <button
+                      type="button"
                       key={job.id}
                       onClick={() => setSelectedJob(job)}
                       className={cn(
-                        "w-full text-left p-3 rounded-lg transition-colors",
-                        "hover:bg-muted/50",
-                        selectedJob?.id === job.id && "bg-muted"
+                        'w-full text-left p-3 rounded-lg transition-colors',
+                        'hover:bg-muted/50',
+                        selectedJob?.id === job.id && 'bg-muted',
                       )}
                     >
                       <div className="flex-1 min-w-0 overflow-hidden">
@@ -145,7 +145,9 @@ export function HistoryDialog({ open, onOpenChange, history, onDelete }: History
                       {selectedJob.status === 'completed' && selectedJob.output_path && (
                         <Button
                           size="sm"
-                          onClick={() => revealItemInDir(selectedJob.output_path!)}
+                          onClick={() =>
+                            selectedJob.output_path && revealItemInDir(selectedJob.output_path)
+                          }
                           className="gap-1.5"
                         >
                           <FolderOpen className="w-4 h-4" />
@@ -174,7 +176,9 @@ export function HistoryDialog({ open, onOpenChange, history, onDelete }: History
                         Prompt
                       </div>
                       <div className="p-3 rounded-lg bg-primary/5 border border-primary/10">
-                        <p className="text-sm break-words whitespace-pre-wrap">{selectedJob.user_prompt}</p>
+                        <p className="text-sm break-words whitespace-pre-wrap">
+                          {selectedJob.user_prompt}
+                        </p>
                       </div>
                     </div>
                   )}
@@ -248,7 +252,9 @@ export function HistoryDialog({ open, onOpenChange, history, onDelete }: History
                         Error
                       </div>
                       <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20">
-                        <p className="text-sm text-red-500 break-words whitespace-pre-wrap">{selectedJob.error_message}</p>
+                        <p className="text-sm text-red-500 break-words whitespace-pre-wrap">
+                          {selectedJob.error_message}
+                        </p>
                       </div>
                     </div>
                   )}

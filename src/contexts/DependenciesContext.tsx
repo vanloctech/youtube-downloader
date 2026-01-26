@@ -1,5 +1,5 @@
-import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react';
 import { invoke } from '@tauri-apps/api/core';
+import { createContext, type ReactNode, useCallback, useContext, useEffect, useState } from 'react';
 
 export interface YtdlpVersionInfo {
   version: string;
@@ -46,7 +46,7 @@ interface DependenciesContextType {
   isUpdating: boolean;
   error: string | null;
   updateSuccess: boolean;
-  
+
   // FFmpeg state
   ffmpegStatus: FfmpegStatus | null;
   ffmpegLoading: boolean;
@@ -55,17 +55,17 @@ interface DependenciesContextType {
   ffmpegSuccess: boolean;
   ffmpegUpdateInfo: FfmpegUpdateInfo | null;
   ffmpegCheckingUpdate: boolean;
-  
+
   // Actions
   refreshYtdlpVersion: () => Promise<void>;
   checkForUpdate: () => Promise<void>;
   updateYtdlp: () => Promise<void>;
-  
+
   // FFmpeg actions
   checkFfmpeg: () => Promise<void>;
   checkFfmpegUpdate: () => Promise<void>;
   downloadFfmpeg: () => Promise<void>;
-  
+
   // Bun state
   bunStatus: BunStatus | null;
   bunLoading: boolean;
@@ -74,7 +74,7 @@ interface DependenciesContextType {
   bunSuccess: boolean;
   bunUpdateInfo: BunUpdateInfo | null;
   bunCheckingUpdate: boolean;
-  
+
   // Bun actions
   checkBun: () => Promise<void>;
   checkBunUpdate: () => Promise<void>;
@@ -92,7 +92,7 @@ export function DependenciesProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null);
   const [updateSuccess, setUpdateSuccess] = useState(false);
   const [initialized, setInitialized] = useState(false);
-  
+
   // FFmpeg state
   const [ffmpegStatus, setFfmpegStatus] = useState<FfmpegStatus | null>(null);
   const [ffmpegLoading, setFfmpegLoading] = useState(false);
@@ -101,7 +101,7 @@ export function DependenciesProvider({ children }: { children: ReactNode }) {
   const [ffmpegSuccess, setFfmpegSuccess] = useState(false);
   const [ffmpegUpdateInfo, setFfmpegUpdateInfo] = useState<FfmpegUpdateInfo | null>(null);
   const [ffmpegCheckingUpdate, setFfmpegCheckingUpdate] = useState(false);
-  
+
   // Bun state
   const [bunStatus, setBunStatus] = useState<BunStatus | null>(null);
   const [bunLoading, setBunLoading] = useState(false);
@@ -265,7 +265,7 @@ export function DependenciesProvider({ children }: { children: ReactNode }) {
     setUpdateSuccess(false);
     try {
       const newVersion = await invoke<string>('update_ytdlp');
-      setYtdlpInfo(prev => prev ? { ...prev, version: newVersion } : null);
+      setYtdlpInfo((prev) => (prev ? { ...prev, version: newVersion } : null));
       setLatestVersion(null);
       setUpdateSuccess(true);
       // Hide success message after 3 seconds
