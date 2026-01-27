@@ -5,15 +5,16 @@ import {
   Check,
   CheckCircle2,
   Download,
-  ExternalLink,
   Eye,
   EyeOff,
+  FileText,
   Github,
   GripVertical,
   Heart,
   Info,
   Loader2,
   Plus,
+  RefreshCw,
   Settings,
   Sparkles,
   X,
@@ -44,6 +45,7 @@ import {
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { useAI } from '@/contexts/AIContext';
+import { useDownload } from '@/contexts/DownloadContext';
 import { useUpdater } from '@/contexts/UpdaterContext';
 import type { AIProvider, SummaryStyle } from '@/lib/types';
 import { DEFAULT_TRANSCRIPT_LANGUAGES, LANGUAGE_OPTIONS } from '@/lib/types';
@@ -564,6 +566,8 @@ function AboutSettingsContent({
   isAppError: boolean;
   highlightId: string | null;
 }) {
+  const { settings, updateAutoCheckUpdate } = useDownload();
+
   return (
     <div className="space-y-8">
       <SettingsSection
@@ -610,8 +614,8 @@ function AboutSettingsContent({
                 </p>
               </div>
             </div>
-            <div className="flex flex-col gap-2">
-              {isAppUpdateAvailable ? (
+            <div className="flex items-center gap-1.5">
+              {isAppUpdateAvailable && (
                 <Button
                   size="sm"
                   onClick={updater.downloadAndInstall}
@@ -632,48 +636,71 @@ function AboutSettingsContent({
                     </>
                   )}
                 </Button>
-              ) : (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={updater.checkForUpdate}
-                  disabled={isAppChecking}
-                >
-                  {isAppChecking ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Check Updates'}
-                </Button>
               )}
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={updater.checkForUpdate}
+                disabled={isAppChecking}
+                title="Check for updates"
+                className="h-9 w-9"
+              >
+                <RefreshCw className={cn('w-4 h-4', isAppChecking && 'animate-spin')} />
+              </Button>
             </div>
+          </div>
+
+          {/* Quick Links */}
+          <div className="flex flex-wrap items-center gap-2 mt-4 pt-4 border-t border-border/50">
+            <a
+              href="https://github.com/vanloctech/youwee"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-background/50 hover:bg-background text-xs font-medium transition-colors"
+            >
+              <Github className="w-3.5 h-3.5" />
+              GitHub
+            </a>
+            <a
+              href="https://github.com/vanloctech/youwee/blob/main/LICENSE"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-background/50 hover:bg-background text-xs font-medium transition-colors"
+            >
+              <FileText className="w-3.5 h-3.5" />
+              License
+            </a>
+            <a
+              href="https://github.com/vanloctech/youwee/issues"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-background/50 hover:bg-background text-xs font-medium transition-colors"
+            >
+              <Bug className="w-3.5 h-3.5" />
+              Report Issue
+            </a>
+          </div>
+
+          {/* Made with love */}
+          <div className="flex items-center justify-center gap-1.5 mt-4 pt-4 border-t border-border/50">
+            <span className="text-xs text-muted-foreground">Made with</span>
+            <Heart className="w-3.5 h-3.5 text-red-500 fill-red-500" />
+            <span className="text-xs text-muted-foreground">by</span>
+            <span className="text-xs font-medium bg-gradient-to-r from-red-500 via-yellow-500 to-red-500 bg-clip-text text-transparent">
+              Vietnam
+            </span>
           </div>
         </SettingsCard>
 
-        {/* Quick Links */}
-        <SettingsCard id="github" highlight={highlightId === 'github'}>
-          <div className="grid grid-cols-2 gap-2">
-            <a
-              href="https://github.com/nicepkg/youwee"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-2 p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
-            >
-              <Github className="w-4 h-4" />
-              <span className="text-sm">GitHub</span>
-              <ExternalLink className="w-3 h-3 ml-auto text-muted-foreground" />
-            </a>
-            <a
-              href="https://github.com/nicepkg/youwee/issues"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-2 p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
-            >
-              <Bug className="w-4 h-4" />
-              <span className="text-sm">Report Bug</span>
-              <ExternalLink className="w-3 h-3 ml-auto text-muted-foreground" />
-            </a>
-          </div>
-          <div className="flex items-center justify-center gap-1.5 mt-4 pt-4 border-t border-border/50 text-xs text-muted-foreground">
-            Made with <Heart className="w-3 h-3 text-red-500 fill-red-500" /> by locnguyen
-          </div>
-        </SettingsCard>
+        {/* Auto Update Toggle */}
+        <SettingsRow
+          id="auto-update"
+          label="Auto-check for updates"
+          description="Check for updates when app opens"
+          highlight={highlightId === 'auto-update'}
+        >
+          <Switch checked={settings.autoCheckUpdate} onCheckedChange={updateAutoCheckUpdate} />
+        </SettingsRow>
       </SettingsSection>
     </div>
   );
