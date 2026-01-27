@@ -209,8 +209,19 @@ export type HistoryFilter =
 export type HistorySort = 'recent' | 'oldest' | 'title' | 'size';
 
 // AI types
-export type AIProvider = 'gemini' | 'openai' | 'ollama' | 'proxy';
+export type AIProvider = 'gemini' | 'openai' | 'deepseek' | 'qwen' | 'ollama' | 'proxy';
 export type SummaryStyle = 'short' | 'concise' | 'detailed';
+
+// Network Proxy types
+export type ProxyMode = 'off' | 'http' | 'socks5';
+
+export interface ProxySettings {
+  mode: ProxyMode;
+  host?: string; // e.g., "127.0.0.1" or "proxy.example.com"
+  port?: number; // e.g., 7890
+  username?: string; // Optional auth
+  password?: string; // Optional auth
+}
 
 // Cookie/Authentication types
 export type CookieMode = 'off' | 'browser' | 'file';
@@ -249,6 +260,9 @@ export interface AIConfig {
   summary_language: string;
   timeout_seconds?: number; // Timeout for AI generation (default 120s)
   transcript_languages?: string[]; // Languages to try for transcript extraction (order matters)
+  // Whisper settings
+  whisper_enabled?: boolean; // Enable Whisper as fallback transcription
+  whisper_api_key?: string; // Separate OpenAI key for Whisper (used when provider !== 'openai')
 }
 
 // Available languages (shared between transcript extraction and summary output)

@@ -20,11 +20,13 @@ import type {
   DownloadProgress,
   Format,
   ItemUniversalSettings,
+  ProxySettings,
   Quality,
 } from '@/lib/types';
 
 const STORAGE_KEY = 'youwee-universal-settings';
 const COOKIE_STORAGE_KEY = 'youwee-cookie-settings';
+const PROXY_STORAGE_KEY = 'youwee-proxy-settings';
 const DOWNLOAD_STORAGE_KEY = 'youwee-settings';
 
 // Simplified settings for Universal downloads (no codec, subtitles, playlist)
@@ -60,6 +62,34 @@ function loadCookieSettings(): CookieSettings {
     console.error('Failed to load cookie settings:', e);
   }
   return { mode: 'off' };
+}
+
+// Load proxy settings from localStorage (shared with DownloadContext)
+function loadProxySettings(): ProxySettings {
+  try {
+    const saved = localStorage.getItem(PROXY_STORAGE_KEY);
+    if (saved) {
+      return JSON.parse(saved);
+    }
+  } catch (e) {
+    console.error('Failed to load proxy settings:', e);
+  }
+  return { mode: 'off' };
+}
+
+// Build proxy URL string from settings
+function buildProxyUrl(settings: ProxySettings): string | undefined {
+  if (settings.mode === 'off' || !settings.host || !settings.port) {
+    return undefined;
+  }
+
+  const protocol = settings.mode === 'socks5' ? 'socks5' : 'http';
+  const auth =
+    settings.username && settings.password
+      ? `${encodeURIComponent(settings.username)}:${encodeURIComponent(settings.password)}@`
+      : '';
+
+  return `${protocol}://${auth}${settings.host}:${settings.port}`;
 }
 
 // Load embed settings from main download settings
@@ -342,6 +372,7 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
         const itemSettings = item.settings as ItemUniversalSettings | undefined;
         const logStderr = localStorage.getItem('youwee_log_stderr') !== 'false';
         const cookieSettings = loadCookieSettings();
+        const proxySettings = loadProxySettings();
         const embedSettings = loadEmbedSettings();
 
         await invoke('download_video', {
@@ -365,6 +396,8 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
           cookieBrowser: cookieSettings.browser || null,
           cookieBrowserProfile: cookieSettings.browserProfile || null,
           cookieFilePath: cookieSettings.filePath || null,
+          // Proxy settings
+          proxyUrl: buildProxyUrl(proxySettings) || null,
           // Post-processing settings (from main download settings)
           embedMetadata: embedSettings.embedMetadata,
           embedThumbnail: embedSettings.embedThumbnail,

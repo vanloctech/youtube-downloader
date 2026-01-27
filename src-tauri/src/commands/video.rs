@@ -20,6 +20,7 @@ pub async fn get_video_transcript(
     cookie_browser: Option<String>,
     cookie_browser_profile: Option<String>,
     cookie_file_path: Option<String>,
+    proxy_url: Option<String>,
 ) -> Result<String, String> {
     // Log the URL being processed
     #[cfg(debug_assertions)]
@@ -92,6 +93,7 @@ pub async fn get_video_transcript(
                 cookie_browser.as_deref(),
                 cookie_browser_profile.as_deref(),
                 cookie_file_path.as_deref(),
+                proxy_url.as_deref(),
             )
         ).await;
         
@@ -230,6 +232,7 @@ pub async fn get_video_transcript(
             cookie_browser.as_deref(),
             cookie_browser_profile.as_deref(),
             cookie_file_path.as_deref(),
+            proxy_url.as_deref(),
         )
     ).await;
     
@@ -424,6 +427,7 @@ pub async fn get_video_info(
     cookie_browser: Option<String>,
     cookie_browser_profile: Option<String>,
     cookie_file_path: Option<String>,
+    proxy_url: Option<String>,
 ) -> Result<VideoInfoResponse, String> {
     let args = [
         "--dump-json",
@@ -441,6 +445,7 @@ pub async fn get_video_info(
         cookie_browser.as_deref(),
         cookie_browser_profile.as_deref(),
         cookie_file_path.as_deref(),
+        proxy_url.as_deref(),
     ).await?;
     
     let json: serde_json::Value = serde_json::from_str(&json_output)
@@ -512,6 +517,7 @@ pub async fn get_playlist_entries(
     cookie_browser: Option<String>,
     cookie_browser_profile: Option<String>,
     cookie_file_path: Option<String>,
+    proxy_url: Option<String>,
 ) -> Result<Vec<PlaylistVideoEntry>, String> {
     let mut args = vec![
         "--flat-playlist".to_string(),
@@ -535,6 +541,14 @@ pub async fn get_playlist_entries(
         cookie_file_path.as_deref(),
     );
     args.extend(cookie_args);
+    
+    // Add proxy args
+    if let Some(proxy) = proxy_url.as_ref() {
+        if !proxy.is_empty() {
+            args.push("--proxy".to_string());
+            args.push(proxy.clone());
+        }
+    }
     
     args.push(url.clone());
     
@@ -644,6 +658,7 @@ pub async fn get_available_subtitles(
     cookie_browser: Option<String>,
     cookie_browser_profile: Option<String>,
     cookie_file_path: Option<String>,
+    proxy_url: Option<String>,
 ) -> Result<Vec<SubtitleInfo>, String> {
     let args = [
         "--list-subs",
@@ -659,6 +674,7 @@ pub async fn get_available_subtitles(
         cookie_browser.as_deref(),
         cookie_browser_profile.as_deref(),
         cookie_file_path.as_deref(),
+        proxy_url.as_deref(),
     ).await;
     
     let mut subtitles: Vec<SubtitleInfo> = Vec::new();

@@ -49,7 +49,7 @@ function isYouTubeUrl(url: string) {
 
 export function SummaryPage() {
   const ai = useAI();
-  const { cookieSettings } = useDownload();
+  const { cookieSettings, getProxyUrl } = useDownload();
 
   // URL input
   const [url, setUrl] = useState('');
@@ -116,6 +116,7 @@ export function SummaryPage() {
         cookieBrowser: cookieSettings.browser || null,
         cookieBrowserProfile: cookieSettings.browserProfile || null,
         cookieFilePath: cookieSettings.filePath || null,
+        proxyUrl: getProxyUrl() || null,
       });
 
       if (isCancelledRef.current) return;
@@ -137,6 +138,7 @@ export function SummaryPage() {
         cookieBrowser: cookieSettings.browser || null,
         cookieBrowserProfile: cookieSettings.browserProfile || null,
         cookieFilePath: cookieSettings.filePath || null,
+        proxyUrl: getProxyUrl() || null,
       });
 
       if (isCancelledRef.current) return;
@@ -175,7 +177,15 @@ export function SummaryPage() {
         setLoadingStatus('');
       }
     }
-  }, [url, ai.config, summaryStyle, summaryLanguage, transcriptLanguages, cookieSettings]);
+  }, [
+    url,
+    ai.config,
+    summaryStyle,
+    summaryLanguage,
+    transcriptLanguages,
+    cookieSettings,
+    getProxyUrl,
+  ]);
 
   const handleStop = useCallback(() => {
     isCancelledRef.current = true;

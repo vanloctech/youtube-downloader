@@ -1,6 +1,6 @@
 [package]
 name = "youwee"
-version = "0.5.0"
+version = "0.5.1"
 description = "Youwee - Modern YouTube Video Downloader"
 authors = ["locnguyen"]
 license = "MIT"
@@ -28,7 +28,7 @@ tauri-plugin-updater = "2"
 tauri-plugin-process = "2"
 tokio = { version = "1", features = ["full"] }
 regex = "1"
-reqwest = { version = "0.12", features = ["json"] }
+reqwest = { version = "0.12", features = ["json", "multipart"] }
 sha2 = "0.10"
 hex = "0.4"
 flate2 = "1"

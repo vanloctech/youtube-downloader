@@ -404,7 +404,23 @@ pub fn build_cookie_args(
     args
 }
 
-/// Helper to run yt-dlp command with cookie support and get JSON output
+/// Build proxy args for yt-dlp based on proxy URL
+/// Supports HTTP and SOCKS5 proxies with optional authentication
+/// Format: http://host:port, http://user:pass@host:port, socks5://host:port, socks5://user:pass@host:port
+pub fn build_proxy_args(proxy_url: Option<&str>) -> Vec<String> {
+    let mut args = Vec::new();
+    
+    if let Some(url) = proxy_url {
+        if !url.is_empty() && url != "off" {
+            args.push("--proxy".to_string());
+            args.push(url.to_string());
+        }
+    }
+    
+    args
+}
+
+/// Helper to run yt-dlp command with cookie and proxy support and get JSON output
 pub async fn run_ytdlp_json_with_cookies(
     app: &AppHandle,
     base_args: &[&str],
@@ -412,18 +428,21 @@ pub async fn run_ytdlp_json_with_cookies(
     cookie_browser: Option<&str>,
     cookie_browser_profile: Option<&str>,
     cookie_file_path: Option<&str>,
+    proxy_url: Option<&str>,
 ) -> Result<String, String> {
-    // Build full args with cookies
+    // Build full args with cookies and proxy
     let cookie_args = build_cookie_args(cookie_mode, cookie_browser, cookie_browser_profile, cookie_file_path);
+    let proxy_args = build_proxy_args(proxy_url);
     let mut args: Vec<String> = base_args.iter().map(|s| s.to_string()).collect();
     args.extend(cookie_args);
+    args.extend(proxy_args);
     
     let args_ref: Vec<&str> = args.iter().map(|s| s.as_str()).collect();
     
     run_ytdlp_json(app, &args_ref).await
 }
 
-/// Helper to run yt-dlp command with cookie support and get output with stderr
+/// Helper to run yt-dlp command with cookie and proxy support and get output with stderr
 pub async fn run_ytdlp_with_stderr_and_cookies(
     app: &AppHandle,
     base_args: &[&str],
@@ -431,11 +450,14 @@ pub async fn run_ytdlp_with_stderr_and_cookies(
     cookie_browser: Option<&str>,
     cookie_browser_profile: Option<&str>,
     cookie_file_path: Option<&str>,
+    proxy_url: Option<&str>,
 ) -> Result<YtdlpOutput, String> {
-    // Build full args with cookies
+    // Build full args with cookies and proxy
     let cookie_args = build_cookie_args(cookie_mode, cookie_browser, cookie_browser_profile, cookie_file_path);
+    let proxy_args = build_proxy_args(proxy_url);
     let mut args: Vec<String> = base_args.iter().map(|s| s.to_string()).collect();
     args.extend(cookie_args);
+    args.extend(proxy_args);
     
     let args_ref: Vec<&str> = args.iter().map(|s| s.as_str()).collect();
     

@@ -5,6 +5,7 @@ mod download;
 mod dependencies;
 mod ai;
 mod processing;
+mod whisper;
 
 pub use logs::*;
 pub use history::*;
@@ -13,3 +14,4 @@ pub use download::*;
 pub use dependencies::*;
 pub use ai::*;
 pub use processing::*;
+pub use whisper::*;

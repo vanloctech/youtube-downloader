@@ -98,12 +98,17 @@ pub fn run() {
             commands::save_processing_job,
             commands::update_processing_job,
             commands::delete_processing_job,
+            commands::clear_processing_history,
             commands::get_processing_presets,
             commands::save_processing_preset,
             commands::delete_processing_preset,
             commands::generate_video_preview,
             commands::check_preview_exists,
             commands::cleanup_previews,
+            // Whisper commands
+            commands::transcribe_video_with_whisper,
+            commands::transcribe_url_with_whisper,
+            commands::generate_subtitles_with_whisper,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

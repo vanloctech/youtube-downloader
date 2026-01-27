@@ -8,6 +8,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 
+## [0.5.1] - 2026-01-27
+
+### Added
+- **OpenAI Whisper transcription** - Fallback for videos without captions, uses Whisper API to transcribe audio (~$0.006/min)
+- **DeepSeek & Qwen AI providers** - More AI options for video summarization
+- **Proxy support** - Configure HTTP/HTTPS/SOCKS proxy for yt-dlp downloads
+- **Clear All button** in Processing History - Quickly remove all history entries
+- **Settings search** - Find settings quickly with keyboard search
+
+### Changed
+- **Settings page redesigned** - New sidebar navigation with 5 sections (General, Dependencies, AI, Network, About)
+- **Universal page** now has Video/Audio toggle like YouTube page for consistency
+- **macOS app icon** updated with proper Apple guidelines padding
+
+### Fixed
+- Downloads now save to library correctly when using updated yt-dlp
+
+
 ## [0.5.0] - 2026-01-27
 
 ### Added

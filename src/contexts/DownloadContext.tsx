@@ -21,6 +21,7 @@ import type {
   Format,
   ItemDownloadSettings,
   PlaylistVideoEntry,
+  ProxySettings,
   Quality,
   SubtitleFormat,
   SubtitleMode,
@@ -29,6 +30,7 @@ import type {
 
 const STORAGE_KEY = 'youwee-settings';
 const COOKIE_STORAGE_KEY = 'youwee-cookie-settings';
+const PROXY_STORAGE_KEY = 'youwee-proxy-settings';
 
 // Load settings from localStorage
 function loadSavedSettings(): Partial<DownloadSettings> {
@@ -63,6 +65,43 @@ function saveCookieSettings(settings: CookieSettings) {
   } catch (e) {
     console.error('Failed to save cookie settings:', e);
   }
+}
+
+// Load proxy settings from localStorage
+function loadProxySettings(): ProxySettings {
+  try {
+    const saved = localStorage.getItem(PROXY_STORAGE_KEY);
+    if (saved) {
+      return JSON.parse(saved);
+    }
+  } catch (e) {
+    console.error('Failed to load proxy settings:', e);
+  }
+  return { mode: 'off' };
+}
+
+// Save proxy settings to localStorage
+function saveProxySettings(settings: ProxySettings) {
+  try {
+    localStorage.setItem(PROXY_STORAGE_KEY, JSON.stringify(settings));
+  } catch (e) {
+    console.error('Failed to save proxy settings:', e);
+  }
+}
+
+// Build proxy URL string from settings
+export function buildProxyUrl(settings: ProxySettings): string | undefined {
+  if (settings.mode === 'off' || !settings.host || !settings.port) {
+    return undefined;
+  }
+
+  const protocol = settings.mode === 'socks5' ? 'socks5' : 'http';
+  const auth =
+    settings.username && settings.password
+      ? `${encodeURIComponent(settings.username)}:${encodeURIComponent(settings.password)}@`
+      : '';
+
+  return `${protocol}://${auth}${settings.host}:${settings.port}`;
 }
 
 // Save settings to localStorage
@@ -107,6 +146,7 @@ interface DownloadContextType {
   isExpandingPlaylist: boolean;
   settings: DownloadSettings;
   cookieSettings: CookieSettings;
+  proxySettings: ProxySettings;
   currentPlaylistInfo: PlaylistInfo | null;
   addFromText: (text: string) => Promise<number>;
   importFromFile: () => Promise<number>;
@@ -136,6 +176,9 @@ interface DownloadContextType {
   updateUseActualPlayerJs: (enabled: boolean) => void;
   // Cookie settings
   updateCookieSettings: (updates: Partial<CookieSettings>) => void;
+  // Proxy settings
+  updateProxySettings: (updates: Partial<ProxySettings>) => void;
+  getProxyUrl: () => string | undefined;
   // Post-processing settings
   updateEmbedMetadata: (enabled: boolean) => void;
   updateEmbedThumbnail: (enabled: boolean) => void;
@@ -177,6 +220,9 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
 
   // Load cookie settings on init
   const [cookieSettings, setCookieSettings] = useState<CookieSettings>(() => loadCookieSettings());
+
+  // Load proxy settings on init
+  const [proxySettings, setProxySettings] = useState<ProxySettings>(() => loadProxySettings());
 
   const [currentPlaylistInfo, setCurrentPlaylistInfo] = useState<PlaylistInfo | null>(null);
 
@@ -344,6 +390,7 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
           cookieBrowser: cookieSettings.browser || null,
           cookieBrowserProfile: cookieSettings.browserProfile || null,
           cookieFilePath: cookieSettings.filePath || null,
+          proxyUrl: buildProxyUrl(proxySettings) || null,
         });
 
         // Snapshot current settings for these items
@@ -391,7 +438,7 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
         throw error;
       }
     },
-    [settings, cookieSettings, formatDuration],
+    [settings, cookieSettings, proxySettings, formatDuration],
   );
 
   const addFromText = useCallback(
@@ -568,6 +615,8 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
           cookieBrowser: cookieSettings.browser || null,
           cookieBrowserProfile: cookieSettings.browserProfile || null,
           cookieFilePath: cookieSettings.filePath || null,
+          // Proxy settings
+          proxyUrl: buildProxyUrl(proxySettings) || null,
           // Post-processing settings
           embedMetadata: settings.embedMetadata,
           embedThumbnail: settings.embedThumbnail,
@@ -614,7 +663,7 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
       isDownloadingRef.current = false;
       setCurrentPlaylistInfo(null);
     }
-  }, [settings, cookieSettings]);
+  }, [settings, cookieSettings, proxySettings]);
 
   const stopDownload = useCallback(async () => {
     try {
@@ -757,6 +806,18 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const updateProxySettings = useCallback((updates: Partial<ProxySettings>) => {
+    setProxySettings((s) => {
+      const newSettings = { ...s, ...updates };
+      saveProxySettings(newSettings);
+      return newSettings;
+    });
+  }, []);
+
+  const getProxyUrl = useCallback(() => {
+    return buildProxyUrl(proxySettings);
+  }, [proxySettings]);
+
   const updateEmbedMetadata = useCallback((embedMetadata: boolean) => {
     setSettings((s) => {
       const newSettings = { ...s, embedMetadata };
@@ -779,6 +840,7 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
     isExpandingPlaylist,
     settings,
     cookieSettings,
+    proxySettings,
     currentPlaylistInfo,
     addFromText,
     importFromFile,
@@ -805,6 +867,8 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
     updateUseBunRuntime,
     updateUseActualPlayerJs,
     updateCookieSettings,
+    updateProxySettings,
+    getProxyUrl,
     updateEmbedMetadata,
     updateEmbedThumbnail,
   };

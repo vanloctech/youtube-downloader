@@ -210,6 +210,25 @@ export function HistoryProvider({ children }: { children: ReactNode }) {
         console.error('Failed to parse cookie settings:', e);
       }
 
+      // Load proxy settings
+      let proxyUrl: string | null = null;
+      try {
+        const savedProxySettings = localStorage.getItem('youwee-proxy-settings');
+        if (savedProxySettings) {
+          const parsed = JSON.parse(savedProxySettings);
+          if (parsed.mode !== 'off' && parsed.host && parsed.port) {
+            const protocol = parsed.mode === 'socks5' ? 'socks5' : 'http';
+            const auth =
+              parsed.username && parsed.password
+                ? `${encodeURIComponent(parsed.username)}:${encodeURIComponent(parsed.password)}@`
+                : '';
+            proxyUrl = `${protocol}://${auth}${parsed.host}:${parsed.port}`;
+          }
+        }
+      } catch (e) {
+        console.error('Failed to parse proxy settings:', e);
+      }
+
       // Use saved output path if entry has no filepath
       if (!outputPath && savedOutputPath) {
         outputPath = savedOutputPath;
@@ -275,6 +294,8 @@ export function HistoryProvider({ children }: { children: ReactNode }) {
           cookieBrowser,
           cookieBrowserProfile,
           cookieFilePath,
+          // Proxy settings
+          proxyUrl,
         });
 
         // Mark as completed

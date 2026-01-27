@@ -14,10 +14,12 @@ import type {
   CookieSettings,
   LanguageOption,
   ModelOption,
+  ProxySettings,
 } from '@/lib/types';
 
 // Cookie settings storage key (same as in DownloadContext)
 const COOKIE_STORAGE_KEY = 'youwee-cookie-settings';
+const PROXY_STORAGE_KEY = 'youwee-proxy-settings';
 
 // Load cookie settings from localStorage
 function loadCookieSettings(): CookieSettings {
@@ -30,6 +32,34 @@ function loadCookieSettings(): CookieSettings {
     console.error('Failed to load cookie settings:', e);
   }
   return { mode: 'off' };
+}
+
+// Load proxy settings from localStorage
+function loadProxySettings(): ProxySettings {
+  try {
+    const saved = localStorage.getItem(PROXY_STORAGE_KEY);
+    if (saved) {
+      return JSON.parse(saved);
+    }
+  } catch (e) {
+    console.error('Failed to load proxy settings:', e);
+  }
+  return { mode: 'off' };
+}
+
+// Build proxy URL string from settings
+function buildProxyUrl(settings: ProxySettings): string | undefined {
+  if (settings.mode === 'off' || !settings.host || !settings.port) {
+    return undefined;
+  }
+
+  const protocol = settings.mode === 'socks5' ? 'socks5' : 'http';
+  const auth =
+    settings.username && settings.password
+      ? `${encodeURIComponent(settings.username)}:${encodeURIComponent(settings.password)}@`
+      : '';
+
+  return `${protocol}://${auth}${settings.host}:${settings.port}`;
 }
 
 // Task status for background summary generation
@@ -86,6 +116,8 @@ const defaultConfig: AIConfig = {
   summary_language: 'auto',
   timeout_seconds: 120,
   transcript_languages: ['en'],
+  whisper_enabled: false,
+  whisper_api_key: undefined,
 };
 
 const AIContext = createContext<AIContextValue | undefined>(undefined);
@@ -195,16 +227,73 @@ export function AIProvider({ children }: { children: ReactNode }) {
     async (url: string): Promise<string> => {
       const languages = config.transcript_languages || ['en'];
       const cookieSettings = loadCookieSettings();
-      return await invoke<string>('get_video_transcript', {
-        url,
-        languages,
-        cookieMode: cookieSettings.mode,
-        cookieBrowser: cookieSettings.browser || null,
-        cookieBrowserProfile: cookieSettings.browserProfile || null,
-        cookieFilePath: cookieSettings.filePath || null,
-      });
+      const proxySettings = loadProxySettings();
+
+      // Try YouTube captions first
+      try {
+        const transcript = await invoke<string>('get_video_transcript', {
+          url,
+          languages,
+          cookieMode: cookieSettings.mode,
+          cookieBrowser: cookieSettings.browser || null,
+          cookieBrowserProfile: cookieSettings.browserProfile || null,
+          cookieFilePath: cookieSettings.filePath || null,
+          proxyUrl: buildProxyUrl(proxySettings) || null,
+        });
+
+        // Check if we got meaningful transcript
+        if (transcript && transcript.trim().length > 50) {
+          return transcript;
+        }
+      } catch (error) {
+        // No YouTube captions available, will try Whisper fallback
+        if (import.meta.env.DEV) {
+          console.log('[AI] YouTube transcript failed, trying Whisper fallback:', error);
+        }
+      }
+
+      // Fallback to Whisper if enabled
+      if (config.whisper_enabled) {
+        // Determine which API key to use for Whisper
+        const whisperKey = config.provider === 'openai' ? config.api_key : config.whisper_api_key;
+
+        if (whisperKey) {
+          if (import.meta.env.DEV) {
+            console.log('[AI] Using Whisper transcription for:', url);
+          }
+
+          return await invoke<string>('transcribe_url_with_whisper', {
+            url,
+            responseFormat: 'text',
+            openaiApiKey: whisperKey,
+            language: languages[0] || null, // Use first preferred language as hint
+            cookieMode: cookieSettings.mode,
+            cookieBrowser: cookieSettings.browser || null,
+            cookieBrowserProfile: cookieSettings.browserProfile || null,
+            cookieFilePath: cookieSettings.filePath || null,
+            proxyUrl: buildProxyUrl(proxySettings) || null,
+          });
+        } else {
+          throw new Error(
+            'Whisper is enabled but no API key configured. ' +
+              (config.provider === 'openai'
+                ? 'Please add your OpenAI API key.'
+                : 'Please add a Whisper API key in Settings.'),
+          );
+        }
+      }
+
+      throw new Error(
+        'No transcript available. Enable Whisper in Settings to transcribe videos without captions.',
+      );
     },
-    [config.transcript_languages],
+    [
+      config.transcript_languages,
+      config.whisper_enabled,
+      config.provider,
+      config.api_key,
+      config.whisper_api_key,
+    ],
   );
 
   // Background task management
@@ -261,6 +350,9 @@ export function AIProvider({ children }: { children: ReactNode }) {
       // Get cookie settings
       const cookieSettings = loadCookieSettings();
 
+      // Get proxy settings
+      const proxySettings = loadProxySettings();
+
       // Run in background (not awaited, fire-and-forget)
       (async () => {
         try {
@@ -277,6 +369,7 @@ export function AIProvider({ children }: { children: ReactNode }) {
             cookieBrowser: cookieSettings.browser || null,
             cookieBrowserProfile: cookieSettings.browserProfile || null,
             cookieFilePath: cookieSettings.filePath || null,
+            proxyUrl: buildProxyUrl(proxySettings) || null,
           });
 
           if (import.meta.env.DEV) {
@@ -374,6 +467,9 @@ export function AIProvider({ children }: { children: ReactNode }) {
       // Get cookie settings
       const cookieSettings = loadCookieSettings();
 
+      // Get proxy settings
+      const proxySettings = loadProxySettings();
+
       // Run in background
       (async () => {
         try {
@@ -385,6 +481,7 @@ export function AIProvider({ children }: { children: ReactNode }) {
             cookieBrowser: cookieSettings.browser || null,
             cookieBrowserProfile: cookieSettings.browserProfile || null,
             cookieFilePath: cookieSettings.filePath || null,
+            proxyUrl: buildProxyUrl(proxySettings) || null,
           });
 
           // Update to generating status

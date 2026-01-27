@@ -7,6 +7,8 @@ use serde::{Deserialize, Serialize};
 pub enum AIProvider {
     Gemini,
     OpenAI,
+    DeepSeek,
+    Qwen,
     Ollama,
     Proxy, // OpenAI-compatible API with custom domain
 }
@@ -46,6 +48,11 @@ pub struct AIConfig {
     pub timeout_seconds: Option<u64>, // Timeout for AI generation (default 120s)
     #[serde(default)]
     pub transcript_languages: Option<Vec<String>>, // Languages to try for transcript extraction
+    // Whisper settings
+    #[serde(default)]
+    pub whisper_enabled: bool, // Enable Whisper as fallback transcription
+    #[serde(default)]
+    pub whisper_api_key: Option<String>, // Separate OpenAI key for Whisper (used when provider != openai)
 }
 
 impl Default for AIConfig {
@@ -61,6 +68,8 @@ impl Default for AIConfig {
             summary_language: "auto".to_string(),
             timeout_seconds: Some(120),
             transcript_languages: Some(vec!["en".to_string()]),
+            whisper_enabled: false,
+            whisper_api_key: None,
         }
     }
 }
@@ -392,6 +401,120 @@ pub async fn generate_with_ollama(
     })
 }
 
+/// Generate summary using DeepSeek API (OpenAI-compatible)
+pub async fn generate_with_deepseek(
+    api_key: &str,
+    model: &str,
+    transcript: &str,
+    style: &SummaryStyle,
+    language: &str,
+    title: Option<&str>,
+) -> Result<SummaryResult, AIError> {
+    let client = Client::new();
+    let prompt = build_prompt(transcript, style, language, title);
+    
+    let body = serde_json::json!({
+        "model": model,
+        "messages": [{
+            "role": "user",
+            "content": prompt
+        }],
+        "temperature": 0.7,
+        "max_tokens": 2048,
+    });
+    
+    let response = client
+        .post("https://api.deepseek.com/chat/completions")
+        .header("Content-Type", "application/json")
+        .header("Authorization", format!("Bearer {}", api_key))
+        .json(&body)
+        .send()
+        .await
+        .map_err(|e| AIError::NetworkError(e.to_string()))?;
+    
+    if !response.status().is_success() {
+        let status = response.status();
+        let text = response.text().await.unwrap_or_default();
+        return Err(AIError::ApiError(format!("DeepSeek API error ({}): {}", status, text)));
+    }
+    
+    let json: serde_json::Value = response
+        .json()
+        .await
+        .map_err(|e| AIError::ParseError(e.to_string()))?;
+    
+    let summary = json
+        .get("choices")
+        .and_then(|c| c.get(0))
+        .and_then(|c| c.get("message"))
+        .and_then(|m| m.get("content"))
+        .and_then(|t| t.as_str())
+        .ok_or_else(|| AIError::ParseError("No content in response".to_string()))?;
+    
+    Ok(SummaryResult {
+        summary: summary.trim().to_string(),
+        provider: "DeepSeek".to_string(),
+        model: model.to_string(),
+    })
+}
+
+/// Generate summary using Qwen API (OpenAI-compatible via DashScope)
+pub async fn generate_with_qwen(
+    api_key: &str,
+    model: &str,
+    transcript: &str,
+    style: &SummaryStyle,
+    language: &str,
+    title: Option<&str>,
+) -> Result<SummaryResult, AIError> {
+    let client = Client::new();
+    let prompt = build_prompt(transcript, style, language, title);
+    
+    let body = serde_json::json!({
+        "model": model,
+        "messages": [{
+            "role": "user",
+            "content": prompt
+        }],
+        "temperature": 0.7,
+        "max_tokens": 2048,
+    });
+    
+    let response = client
+        .post("https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions")
+        .header("Content-Type", "application/json")
+        .header("Authorization", format!("Bearer {}", api_key))
+        .json(&body)
+        .send()
+        .await
+        .map_err(|e| AIError::NetworkError(e.to_string()))?;
+    
+    if !response.status().is_success() {
+        let status = response.status();
+        let text = response.text().await.unwrap_or_default();
+        return Err(AIError::ApiError(format!("Qwen API error ({}): {}", status, text)));
+    }
+    
+    let json: serde_json::Value = response
+        .json()
+        .await
+        .map_err(|e| AIError::ParseError(e.to_string()))?;
+    
+    let summary = json
+        .get("choices")
+        .and_then(|c| c.get(0))
+        .and_then(|c| c.get("message"))
+        .and_then(|m| m.get("content"))
+        .and_then(|t| t.as_str())
+        .ok_or_else(|| AIError::ParseError("No content in response".to_string()))?;
+    
+    Ok(SummaryResult {
+        summary: summary.trim().to_string(),
+        provider: "Qwen".to_string(),
+        model: model.to_string(),
+    })
+}
+
 /// Generate summary using Proxy (OpenAI-compatible API with custom domain)
 pub async fn generate_with_proxy(
     proxy_url: &str,
@@ -490,6 +613,14 @@ pub async fn generate_summary(
             let api_key = config.api_key.as_ref().ok_or(AIError::NoApiKey)?;
             generate_with_openai(api_key, &config.model, transcript, &config.summary_style, &config.summary_language, title).await
         }
+        AIProvider::DeepSeek => {
+            let api_key = config.api_key.as_ref().ok_or(AIError::NoApiKey)?;
+            generate_with_deepseek(api_key, &config.model, transcript, &config.summary_style, &config.summary_language, title).await
+        }
+        AIProvider::Qwen => {
+            let api_key = config.api_key.as_ref().ok_or(AIError::NoApiKey)?;
+            generate_with_qwen(api_key, &config.model, transcript, &config.summary_style, &config.summary_language, title).await
+        }
         AIProvider::Ollama => {
             let ollama_url = config.ollama_url.as_ref().map(|s| s.as_str()).unwrap_or("http://localhost:11434");
             generate_with_ollama(ollama_url, &config.model, transcript, &config.summary_style, &config.summary_language, title).await
@@ -523,6 +654,14 @@ pub async fn generate_summary_custom(
             let api_key = config.api_key.as_ref().ok_or(AIError::NoApiKey)?;
             generate_with_openai(api_key, &config.model, transcript, style, language, title).await
         }
+        AIProvider::DeepSeek => {
+            let api_key = config.api_key.as_ref().ok_or(AIError::NoApiKey)?;
+            generate_with_deepseek(api_key, &config.model, transcript, style, language, title).await
+        }
+        AIProvider::Qwen => {
+            let api_key = config.api_key.as_ref().ok_or(AIError::NoApiKey)?;
+            generate_with_qwen(api_key, &config.model, transcript, style, language, title).await
+        }
         AIProvider::Ollama => {
             let ollama_url = config.ollama_url.as_ref().map(|s| s.as_str()).unwrap_or("http://localhost:11434");
             generate_with_ollama(ollama_url, &config.model, transcript, style, language, title).await
@@ -550,6 +689,14 @@ pub async fn generate_raw(config: &AIConfig, prompt: &str) -> Result<SummaryResu
         AIProvider::OpenAI => {
             let api_key = config.api_key.as_ref().ok_or(AIError::NoApiKey)?;
             generate_raw_with_openai(api_key, &config.model, prompt).await
+        }
+        AIProvider::DeepSeek => {
+            let api_key = config.api_key.as_ref().ok_or(AIError::NoApiKey)?;
+            generate_raw_with_deepseek(api_key, &config.model, prompt).await
+        }
+        AIProvider::Qwen => {
+            let api_key = config.api_key.as_ref().ok_or(AIError::NoApiKey)?;
+            generate_raw_with_qwen(api_key, &config.model, prompt).await
         }
         AIProvider::Ollama => {
             let ollama_url = config.ollama_url.as_ref().map(|s| s.as_str()).unwrap_or("http://localhost:11434");
@@ -741,6 +888,110 @@ async fn generate_raw_with_ollama(
         summary: text.to_string(),
         model: model.to_string(),
         provider: "Ollama".to_string(),
+    })
+}
+
+/// Raw generation with DeepSeek (no summarization wrapping)
+async fn generate_raw_with_deepseek(
+    api_key: &str,
+    model: &str,
+    prompt: &str,
+) -> Result<SummaryResult, AIError> {
+    let client = Client::new();
+    
+    let body = serde_json::json!({
+        "model": model,
+        "messages": [{
+            "role": "user",
+            "content": prompt
+        }],
+        "temperature": 0.3,
+        "max_tokens": 2048
+    });
+    
+    let response = client
+        .post("https://api.deepseek.com/chat/completions")
+        .header("Authorization", format!("Bearer {}", api_key))
+        .header("Content-Type", "application/json")
+        .json(&body)
+        .send()
+        .await
+        .map_err(|e| AIError::NetworkError(e.to_string()))?;
+    
+    let status = response.status();
+    let response_text = response.text().await.unwrap_or_default();
+    
+    if !status.is_success() {
+        return Err(AIError::ApiError(format!("DeepSeek API error: {}", response_text)));
+    }
+    
+    let json: serde_json::Value = serde_json::from_str(&response_text)
+        .map_err(|e| AIError::ParseError(e.to_string()))?;
+    
+    let text = json
+        .get("choices")
+        .and_then(|c| c.get(0))
+        .and_then(|c| c.get("message"))
+        .and_then(|m| m.get("content"))
+        .and_then(|t| t.as_str())
+        .ok_or_else(|| AIError::ParseError("No text in response".to_string()))?;
+    
+    Ok(SummaryResult {
+        summary: text.to_string(),
+        model: model.to_string(),
+        provider: "DeepSeek".to_string(),
+    })
+}
+
+/// Raw generation with Qwen (no summarization wrapping)
+async fn generate_raw_with_qwen(
+    api_key: &str,
+    model: &str,
+    prompt: &str,
+) -> Result<SummaryResult, AIError> {
+    let client = Client::new();
+    
+    let body = serde_json::json!({
+        "model": model,
+        "messages": [{
+            "role": "user",
+            "content": prompt
+        }],
+        "temperature": 0.3,
+        "max_tokens": 2048
+    });
+    
+    let response = client
+        .post("https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions")
+        .header("Authorization", format!("Bearer {}", api_key))
+        .header("Content-Type", "application/json")
+        .json(&body)
+        .send()
+        .await
+        .map_err(|e| AIError::NetworkError(e.to_string()))?;
+    
+    let status = response.status();
+    let response_text = response.text().await.unwrap_or_default();
+    
+    if !status.is_success() {
+        return Err(AIError::ApiError(format!("Qwen API error: {}", response_text)));
+    }
+    
+    let json: serde_json::Value = serde_json::from_str(&response_text)
+        .map_err(|e| AIError::ParseError(e.to_string()))?;
+    
+    let text = json
+        .get("choices")
+        .and_then(|c| c.get(0))
+        .and_then(|c| c.get("message"))
+        .and_then(|m| m.get("content"))
+        .and_then(|t| t.as_str())
+        .ok_or_else(|| AIError::ParseError("No text in response".to_string()))?;
+    
+    Ok(SummaryResult {
+        summary: text.to_string(),
+        model: model.to_string(),
+        provider: "Qwen".to_string(),
     })
 }
 
