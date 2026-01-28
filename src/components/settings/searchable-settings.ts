@@ -35,6 +35,13 @@ export const SEARCHABLE_SETTINGS: SearchableSetting[] = [
     section: 'general',
   },
   {
+    id: 'language',
+    label: 'Language',
+    description: 'Change app language',
+    keywords: ['language', 'ngôn ngữ', 'english', 'vietnamese', 'tiếng việt', 'locale', 'i18n'],
+    section: 'general',
+  },
+  {
     id: 'embed-metadata',
     label: 'Embed Metadata',
     description: 'Add title, artist, description to files',

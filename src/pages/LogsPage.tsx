@@ -1,17 +1,19 @@
 import { ScrollText, Terminal } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { LogEntry, LogToolbar } from '@/components/logs';
 import { ThemePicker } from '@/components/settings/ThemePicker';
 import { useLogs } from '@/contexts/LogContext';
 import { cn } from '@/lib/utils';
 
 export function LogsPage() {
+  const { t } = useTranslation('pages');
   const { logs, loading } = useLogs();
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       {/* Header */}
       <header className="flex-shrink-0 flex items-center justify-between h-12 sm:h-14 px-4 sm:px-6">
-        <h1 className="text-base sm:text-lg font-semibold">Logs</h1>
+        <h1 className="text-base sm:text-lg font-semibold">{t('logs.title')}</h1>
         <ThemePicker />
       </header>
 
@@ -33,7 +35,7 @@ export function LogsPage() {
           <div className="flex-1 min-h-0 overflow-y-auto">
             {loading && logs.length === 0 ? (
               <div className="flex items-center justify-center h-full">
-                <div className="animate-pulse text-muted-foreground">Loading logs...</div>
+                <div className="animate-pulse text-muted-foreground">{t('logs.loading')}</div>
               </div>
             ) : logs.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full text-center py-12">
@@ -45,10 +47,9 @@ export function LogsPage() {
                 >
                   <ScrollText className="w-8 h-8" />
                 </div>
-                <h3 className="text-lg font-semibold mb-2">No logs yet</h3>
+                <h3 className="text-lg font-semibold mb-2">{t('logs.emptyTitle')}</h3>
                 <p className="text-sm text-muted-foreground max-w-md">
-                  Logs will appear here when you start downloading videos. You'll see the yt-dlp
-                  commands executed, success/error messages, and debug output.
+                  {t('logs.emptyDescription')}
                 </p>
                 <div className="mt-6 p-4 rounded-xl bg-background/50 border border-white/[0.08]">
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -72,7 +73,7 @@ export function LogsPage() {
           {logs.length > 0 && (
             <div className="flex-shrink-0 py-3 border-t border-white/[0.08]">
               <p className="text-xs text-muted-foreground text-center">
-                Showing {logs.length} log entries · Auto-refreshes every 5 seconds
+                {t('logs.stats', { count: logs.length })}
               </p>
             </div>
           )}

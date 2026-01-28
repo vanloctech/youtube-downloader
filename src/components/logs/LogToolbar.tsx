@@ -2,19 +2,12 @@ import { save } from '@tauri-apps/plugin-dialog';
 import { writeTextFile } from '@tauri-apps/plugin-fs';
 import { CheckCircle, Download, FileText, RefreshCw, Search, Trash2, XCircle } from 'lucide-react';
 import { useCallback, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { useLogs } from '@/contexts/LogContext';
 import type { LogFilter } from '@/lib/types';
 import { cn } from '@/lib/utils';
-
-const filterOptions: { value: LogFilter; label: string }[] = [
-  { value: 'all', label: 'All' },
-  { value: 'command', label: 'Commands' },
-  { value: 'success', label: 'Success' },
-  { value: 'error', label: 'Errors' },
-  { value: 'stderr', label: 'Detail' },
-];
 
 interface ExportNotification {
   type: 'success' | 'error';
@@ -23,6 +16,7 @@ interface ExportNotification {
 }
 
 export function LogToolbar() {
+  const { t } = useTranslation('pages');
   const {
     filter,
     search,
@@ -40,15 +34,23 @@ export function LogToolbar() {
   const [exporting, setExporting] = useState(false);
   const [notification, setNotification] = useState<ExportNotification | null>(null);
 
+  const filterOptions: { value: LogFilter; label: string }[] = [
+    { value: 'all', label: t('logs.toolbar.filterAll') },
+    { value: 'command', label: t('logs.toolbar.filterCommands') },
+    { value: 'success', label: t('logs.toolbar.filterSuccess') },
+    { value: 'error', label: t('logs.toolbar.filterErrors') },
+    { value: 'stderr', label: t('logs.toolbar.filterDetail') },
+  ];
+
   const handleClear = useCallback(async () => {
-    if (!confirm('Are you sure you want to clear all logs?')) return;
+    if (!confirm(t('logs.toolbar.clearConfirm'))) return;
     setClearing(true);
     try {
       await clearLogs();
     } finally {
       setClearing(false);
     }
-  }, [clearLogs]);
+  }, [clearLogs, t]);
 
   const handleExport = useCallback(async () => {
     setExporting(true);
@@ -59,7 +61,7 @@ export function LogToolbar() {
       const filePath = await save({
         defaultPath: defaultFileName,
         filters: [{ name: 'JSON', extensions: ['json'] }],
-        title: 'Export Logs',
+        title: t('logs.toolbar.exportLogs'),
       });
 
       if (!filePath) {
@@ -73,7 +75,7 @@ export function LogToolbar() {
 
       setNotification({
         type: 'success',
-        message: 'Logs exported successfully',
+        message: t('logs.toolbar.exportSuccess'),
         path: filePath,
       });
 
@@ -83,13 +85,13 @@ export function LogToolbar() {
       console.error('Export failed:', error);
       setNotification({
         type: 'error',
-        message: `Export failed: ${error}`,
+        message: t('logs.toolbar.exportFailed', { error: String(error) }),
       });
       setTimeout(() => setNotification(null), 5000);
     } finally {
       setExporting(false);
     }
-  }, [exportLogs]);
+  }, [exportLogs, t]);
 
   return (
     <div className="space-y-3">
@@ -121,7 +123,7 @@ export function LogToolbar() {
             onClick={() => setNotification(null)}
             className="text-xs opacity-60 hover:opacity-100"
           >
-            Dismiss
+            {t('logs.toolbar.dismiss')}
           </button>
         </div>
       )}
@@ -133,7 +135,7 @@ export function LogToolbar() {
           type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search logs..."
+          placeholder={t('logs.toolbar.searchPlaceholder')}
           className={cn(
             'pl-10 pr-4 h-11 text-sm',
             'bg-background/50 border-border/50',
@@ -169,7 +171,7 @@ export function LogToolbar() {
           {/* Log detail toggle */}
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-muted/50">
             <FileText className="w-4 h-4 text-muted-foreground" />
-            <span className="text-xs text-muted-foreground">Log detail</span>
+            <span className="text-xs text-muted-foreground">{t('logs.toolbar.logDetail')}</span>
             <Switch
               checked={logStderr}
               onCheckedChange={setLogStderr}
@@ -189,7 +191,7 @@ export function LogToolbar() {
             )}
           >
             <RefreshCw className={cn('w-4 h-4', loading && 'animate-spin')} />
-            Refresh
+            {t('logs.toolbar.refresh')}
           </button>
 
           <button
@@ -204,7 +206,7 @@ export function LogToolbar() {
             )}
           >
             <Download className="w-4 h-4" />
-            Export
+            {t('logs.toolbar.export')}
           </button>
 
           <button
@@ -219,7 +221,7 @@ export function LogToolbar() {
             )}
           >
             <Trash2 className="w-4 h-4" />
-            Clear
+            {t('logs.toolbar.clear')}
           </button>
         </div>
       </div>

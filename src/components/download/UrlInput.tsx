@@ -1,5 +1,6 @@
 import { ClipboardPaste, FileText, Link, Link2, List, Loader2, Plus } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -55,6 +56,7 @@ export function UrlInput({
   onImportFile,
   onImportClipboard,
 }: UrlInputProps) {
+  const { t } = useTranslation('download');
   const [value, setValue] = useState('');
   const [isImporting, setIsImporting] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
@@ -234,10 +236,10 @@ export function UrlInput({
                 ? 'bg-background shadow-sm text-foreground'
                 : 'text-muted-foreground hover:text-foreground',
             )}
-            title="Single URL mode"
+            title={t('urlInput.singleHint')}
           >
             <Link2 className="w-3.5 h-3.5" />
-            <span>Single</span>
+            <span>{t('urlInput.single')}</span>
           </button>
           <button
             type="button"
@@ -249,15 +251,15 @@ export function UrlInput({
                 ? 'bg-background shadow-sm text-foreground'
                 : 'text-muted-foreground hover:text-foreground',
             )}
-            title="Multiple URLs mode - add many URLs at once"
+            title={t('urlInput.multipleHint')}
           >
             <List className="w-3.5 h-3.5" />
-            <span>Multiple</span>
+            <span>{t('urlInput.multiple')}</span>
           </button>
         </div>
 
         <span className="text-xs text-muted-foreground hidden sm:inline">
-          {isExpanded ? 'Add multiple URLs (one per line)' : 'Paste a single YouTube URL'}
+          {isExpanded ? t('urlInput.multipleHint') : t('urlInput.singleHint')}
         </span>
       </div>
 
@@ -270,7 +272,7 @@ export function UrlInput({
               <Link className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
                 ref={inputRef}
-                placeholder="Paste YouTube URL here..."
+                placeholder={t('urlInput.placeholder')}
                 value={value}
                 onChange={handleInputChange}
                 onKeyDown={handleKeyDown}
@@ -293,14 +295,16 @@ export function UrlInput({
               className="h-11 px-4 rounded-md font-medium text-sm btn-gradient flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
               onClick={handleAdd}
               disabled={disabled || !value.trim() || isAdding || isExpandingPlaylist}
-              title="Add URL to queue"
+              title={t('urlInput.add')}
             >
               {isAdding || isExpandingPlaylist ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
               ) : (
                 <Plus className="w-4 h-4" />
               )}
-              <span className="hidden sm:inline">{isExpandingPlaylist ? 'Loading...' : 'Add'}</span>
+              <span className="hidden sm:inline">
+                {isExpandingPlaylist ? t('urlInput.loading') : t('urlInput.add')}
+              </span>
             </button>
           </div>
         ) : (
@@ -308,7 +312,7 @@ export function UrlInput({
           <div className="relative">
             <Textarea
               ref={textareaRef}
-              placeholder="Paste YouTube URLs here (one per line)&#10;https://www.youtube.com/watch?v=...&#10;https://youtu.be/..."
+              placeholder={t('urlInput.placeholderMultiple')}
               value={value}
               onChange={handleInputChange}
               onKeyDown={handleKeyDown}
@@ -350,7 +354,7 @@ export function UrlInput({
             className="h-9 px-4 rounded-md font-medium text-sm btn-gradient flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             onClick={handleAdd}
             disabled={disabled || !value.trim() || isAdding || isExpandingPlaylist}
-            title="Add all URLs to queue"
+            title={t('urlInput.addToQueue')}
           >
             {isAdding || isExpandingPlaylist ? (
               <Loader2 className="w-4 h-4 animate-spin" />
@@ -358,8 +362,8 @@ export function UrlInput({
               <Plus className="w-4 h-4" />
             )}
             {isExpandingPlaylist
-              ? 'Loading playlist...'
-              : `Add to Queue ${urlCount > 0 ? `(${urlCount})` : ''}`}
+              ? t('urlInput.loadingPlaylist')
+              : `${t('urlInput.addToQueue')} ${urlCount > 0 ? `(${urlCount})` : ''}`}
           </button>
         )}
 
@@ -370,14 +374,14 @@ export function UrlInput({
             onClick={handleImportClipboard}
             disabled={disabled || isImporting}
             className="h-8 gap-1.5 text-xs"
-            title="Paste from clipboard"
+            title={t('urlInput.paste')}
           >
             {isImporting ? (
               <Loader2 className="w-3.5 h-3.5 animate-spin" />
             ) : (
               <ClipboardPaste className="w-3.5 h-3.5" />
             )}
-            <span className="hidden xs:inline">Paste</span>
+            <span className="hidden xs:inline">{t('urlInput.paste')}</span>
           </Button>
 
           <Button
@@ -386,10 +390,10 @@ export function UrlInput({
             onClick={handleImportFile}
             disabled={disabled || isImporting}
             className="h-8 gap-1.5 text-xs"
-            title="Import URLs from .txt file"
+            title={t('urlInput.import')}
           >
             <FileText className="w-3.5 h-3.5" />
-            <span className="hidden xs:inline">Import</span>
+            <span className="hidden xs:inline">{t('urlInput.import')}</span>
           </Button>
         </div>
 
@@ -397,7 +401,7 @@ export function UrlInput({
           <kbd className="px-1.5 py-0.5 rounded bg-muted font-mono text-[10px]">⌘</kbd>
           <span>+</span>
           <kbd className="px-1.5 py-0.5 rounded bg-muted font-mono text-[10px]">↵</kbd>
-          <span className="ml-1">to add</span>
+          <span className="ml-1">{t('urlInput.toAdd')}</span>
         </div>
       </div>
 
@@ -406,7 +410,7 @@ export function UrlInput({
         <div className="absolute inset-0 bg-primary/10 backdrop-blur-sm rounded-xl flex items-center justify-center z-10">
           <div className="text-center">
             <List className="w-8 h-8 text-primary mx-auto mb-2" />
-            <p className="text-sm font-medium">Drop URLs or .txt file here</p>
+            <p className="text-sm font-medium">{t('urlInput.dropHint')}</p>
           </div>
         </div>
       )}

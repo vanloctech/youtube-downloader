@@ -1,24 +1,11 @@
 import { revealItemInDir } from '@tauri-apps/plugin-opener';
 import { Check, FolderOpen, Lightbulb, Loader2, Send, Square, Wand2 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import type { ChatMessage, ProcessingProgress } from '@/lib/types';
 import { cn } from '@/lib/utils';
-
-// Prompt suggestions for chat
-const promptSuggestions = [
-  { id: 'cut', label: 'Cut', prompt: 'Cut video from [start_time] to [end_time]' },
-  { id: 'extract_audio', label: 'Extract Audio', prompt: 'Extract audio as [mp3/m4a/wav]' },
-  { id: 'resize', label: 'Resize', prompt: 'Resize to [720p/1080p/480p]' },
-  { id: 'convert', label: 'Convert', prompt: 'Convert to [mp4/webm/mkv/mov]' },
-  { id: 'compress', label: 'Compress', prompt: 'Compress video to reduce file size' },
-  { id: 'speed', label: 'Speed', prompt: 'Change speed to [0.5x/1.5x/2x]' },
-  { id: 'gif', label: 'GIF', prompt: 'Create GIF from [start_time] to [end_time]' },
-  { id: 'rotate', label: 'Rotate', prompt: 'Rotate video [90/180/270] degrees' },
-  { id: 'thumbnail', label: 'Thumbnail', prompt: 'Extract thumbnail at [time]' },
-  { id: 'remove_audio', label: 'Mute', prompt: 'Remove audio from video' },
-];
 
 export interface ChatPanelProps {
   messages: ChatMessage[];
@@ -39,10 +26,65 @@ export function ChatPanel({
   onSendMessage,
   onCancelProcessing,
 }: ChatPanelProps) {
+  const { t } = useTranslation('pages');
   const [inputMessage, setInputMessage] = useState('');
   const [isInputFocused, setIsInputFocused] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Prompt suggestions for chat
+  const promptSuggestions = [
+    {
+      id: 'cut',
+      label: t('processing.chat.prompts.cut'),
+      prompt: t('processing.chat.prompts.cutPrompt'),
+    },
+    {
+      id: 'extract_audio',
+      label: t('processing.chat.prompts.extractAudio'),
+      prompt: t('processing.chat.prompts.extractAudioPrompt'),
+    },
+    {
+      id: 'resize',
+      label: t('processing.chat.prompts.resize'),
+      prompt: t('processing.chat.prompts.resizePrompt'),
+    },
+    {
+      id: 'convert',
+      label: t('processing.chat.prompts.convert'),
+      prompt: t('processing.chat.prompts.convertPrompt'),
+    },
+    {
+      id: 'compress',
+      label: t('processing.chat.prompts.compress'),
+      prompt: t('processing.chat.prompts.compressPrompt'),
+    },
+    {
+      id: 'speed',
+      label: t('processing.chat.prompts.speed'),
+      prompt: t('processing.chat.prompts.speedPrompt'),
+    },
+    {
+      id: 'gif',
+      label: t('processing.chat.prompts.gif'),
+      prompt: t('processing.chat.prompts.gifPrompt'),
+    },
+    {
+      id: 'rotate',
+      label: t('processing.chat.prompts.rotate'),
+      prompt: t('processing.chat.prompts.rotatePrompt'),
+    },
+    {
+      id: 'thumbnail',
+      label: t('processing.chat.prompts.thumbnail'),
+      prompt: t('processing.chat.prompts.thumbnailPrompt'),
+    },
+    {
+      id: 'remove_audio',
+      label: t('processing.chat.prompts.mute'),
+      prompt: t('processing.chat.prompts.mutePrompt'),
+    },
+  ];
 
   // Auto-scroll to bottom when messages change
   useEffect(() => {
@@ -74,8 +116,8 @@ export function ChatPanel({
               <Wand2 className="w-4 h-4 text-primary" />
             </div>
             <div>
-              <h3 className="font-semibold text-sm">Youwee</h3>
-              <p className="text-xs text-muted-foreground">Describe your edit</p>
+              <h3 className="font-semibold text-sm">{t('processing.chat.title')}</h3>
+              <p className="text-xs text-muted-foreground">{t('processing.chat.subtitle')}</p>
             </div>
           </div>
 
@@ -98,7 +140,7 @@ export function ChatPanel({
                   <Lightbulb className="w-4 h-4" />
                 </button>
               </TooltipTrigger>
-              <TooltipContent>Prompt Templates</TooltipContent>
+              <TooltipContent>{t('processing.chat.promptTemplates')}</TooltipContent>
             </Tooltip>
 
             {/* Suggestions Dropdown */}
@@ -111,7 +153,9 @@ export function ChatPanel({
                   'p-2 z-50',
                 )}
               >
-                <div className="text-xs text-muted-foreground px-2 py-1 mb-1">Prompt Templates</div>
+                <div className="text-xs text-muted-foreground px-2 py-1 mb-1">
+                  {t('processing.chat.promptTemplates')}
+                </div>
                 <div className="space-y-0.5 max-h-64 overflow-y-auto">
                   {promptSuggestions.map((suggestion) => (
                     <button
@@ -146,10 +190,10 @@ export function ChatPanel({
                 <Wand2 className="w-6 h-6 text-primary/60" />
               </div>
               <p className="text-sm font-medium text-muted-foreground">
-                What would you like to do?
+                {t('processing.chat.emptyTitle')}
               </p>
               <p className="text-xs text-muted-foreground/60 mt-1 max-w-[180px]">
-                Try "Cut from 1:00 to 2:00" or "Convert to 720p"
+                {t('processing.chat.emptyHint')}
               </p>
             </div>
           ) : (
@@ -171,7 +215,9 @@ export function ChatPanel({
                       <div className="w-5 h-5 rounded-full bg-green-500/20 flex items-center justify-center flex-shrink-0">
                         <Check className="w-3 h-3 text-green-500" />
                       </div>
-                      <span className="text-xs text-muted-foreground">Complete</span>
+                      <span className="text-xs text-muted-foreground">
+                        {t('processing.chat.complete')}
+                      </span>
                     </div>
                     <p className="text-sm text-foreground [overflow-wrap:anywhere]">
                       {msg.content}
@@ -182,7 +228,7 @@ export function ChatPanel({
                       onClick={() => msg.outputPath && revealItemInDir(msg.outputPath)}
                     >
                       <FolderOpen className="w-3 h-3" />
-                      Open in Folder
+                      {t('processing.chat.openInFolder')}
                     </button>
                   </div>
                 ) : (
@@ -200,7 +246,7 @@ export function ChatPanel({
                     {msg.role === 'assistant' && (
                       <div className="flex items-center gap-1.5 mb-1.5 text-xs text-muted-foreground">
                         <Wand2 className="w-3 h-3" />
-                        <span>Youwee</span>
+                        <span>{t('processing.chat.title')}</span>
                       </div>
                     )}
                     <p
@@ -220,7 +266,7 @@ export function ChatPanel({
             <div className="flex justify-start">
               <div className="inline-flex items-center gap-2 text-muted-foreground text-sm p-3 bg-muted/80 border border-border/50 rounded-xl rounded-bl-sm animate-in fade-in slide-in-from-bottom-2 duration-200">
                 <Loader2 className="w-4 h-4 animate-spin text-primary" />
-                <span>Generating...</span>
+                <span>{t('processing.chat.generating')}</span>
               </div>
             </div>
           )}
@@ -231,7 +277,7 @@ export function ChatPanel({
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Loader2 className="w-4 h-4 animate-spin text-primary" />
-                    <span className="text-sm font-medium">Processing...</span>
+                    <span className="text-sm font-medium">{t('processing.chat.processing')}</span>
                   </div>
                   <span className="text-sm font-semibold text-primary">
                     {progress.percent.toFixed(0)}%
@@ -276,7 +322,7 @@ export function ChatPanel({
                   className="flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium text-destructive hover:text-destructive-foreground hover:bg-destructive/90 bg-destructive/10 border border-destructive/20 rounded-lg transition-colors w-fit"
                 >
                   <Square className="w-3 h-3" />
-                  Cancel
+                  {t('processing.chat.cancel')}
                 </button>
               </div>
             </div>
@@ -318,7 +364,7 @@ export function ChatPanel({
 
           <div className="relative flex-1 min-w-0">
             <textarea
-              placeholder="Describe your edit..."
+              placeholder={t('processing.chat.inputPlaceholder')}
               value={inputMessage}
               onChange={(e) => {
                 setInputMessage(e.target.value);

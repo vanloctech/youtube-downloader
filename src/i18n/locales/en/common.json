@@ -1,0 +1,23 @@
+{
+  "sidebar": {
+    "youtube": "YouTube",
+    "universal": "Universal",
+    "summary": "AI Summary",
+    "processing": "Processing",
+    "library": "Library",
+    "logs": "Logs",
+    "settings": "Settings",
+    "light": "Light",
+    "dark": "Dark",
+    "lightMode": "Light Mode",
+    "darkMode": "Dark Mode",
+    "collapse": "Collapse",
+    "expand": "Expand"
+  },
+  "language": {
+    "en": "English",
+    "vi": "Tiếng Việt",
+    "label": "Language",
+    "select": "Select language"
+  }
+}

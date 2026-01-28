@@ -1,44 +1,12 @@
 import { AlertTriangle, Check, CheckCircle, Copy, Info, Terminal, XCircle } from 'lucide-react';
 import { useCallback, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { LogEntry as LogEntryType } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
 interface LogEntryProps {
   log: LogEntryType;
 }
-
-const logTypeConfig = {
-  command: {
-    icon: Terminal,
-    label: 'COMMAND',
-    className: 'text-blue-500 bg-blue-500/10 border-blue-500/20',
-    iconClassName: 'text-blue-500',
-  },
-  success: {
-    icon: CheckCircle,
-    label: 'SUCCESS',
-    className: 'text-green-500 bg-green-500/10 border-green-500/20',
-    iconClassName: 'text-green-500',
-  },
-  error: {
-    icon: XCircle,
-    label: 'ERROR',
-    className: 'text-red-500 bg-red-500/10 border-red-500/20',
-    iconClassName: 'text-red-500',
-  },
-  stderr: {
-    icon: AlertTriangle,
-    label: 'STDERR',
-    className: 'text-yellow-500 bg-yellow-500/10 border-yellow-500/20',
-    iconClassName: 'text-yellow-500',
-  },
-  info: {
-    icon: Info,
-    label: 'INFO',
-    className: 'text-gray-500 bg-gray-500/10 border-gray-500/20',
-    iconClassName: 'text-gray-500',
-  },
-};
 
 function formatTimestamp(isoString: string): string {
   try {
@@ -56,7 +24,42 @@ function formatTimestamp(isoString: string): string {
 }
 
 export function LogEntry({ log }: LogEntryProps) {
+  const { t } = useTranslation('pages');
   const [copied, setCopied] = useState(false);
+
+  const logTypeConfig = {
+    command: {
+      icon: Terminal,
+      label: t('logs.entry.command'),
+      className: 'text-blue-500 bg-blue-500/10 border-blue-500/20',
+      iconClassName: 'text-blue-500',
+    },
+    success: {
+      icon: CheckCircle,
+      label: t('logs.entry.success'),
+      className: 'text-green-500 bg-green-500/10 border-green-500/20',
+      iconClassName: 'text-green-500',
+    },
+    error: {
+      icon: XCircle,
+      label: t('logs.entry.error'),
+      className: 'text-red-500 bg-red-500/10 border-red-500/20',
+      iconClassName: 'text-red-500',
+    },
+    stderr: {
+      icon: AlertTriangle,
+      label: t('logs.entry.stderr'),
+      className: 'text-yellow-500 bg-yellow-500/10 border-yellow-500/20',
+      iconClassName: 'text-yellow-500',
+    },
+    info: {
+      icon: Info,
+      label: t('logs.entry.info'),
+      className: 'text-gray-500 bg-gray-500/10 border-gray-500/20',
+      iconClassName: 'text-gray-500',
+    },
+  };
+
   const config = logTypeConfig[log.log_type] || logTypeConfig.info;
   const Icon = config.icon;
 
@@ -110,12 +113,12 @@ export function LogEntry({ log }: LogEntryProps) {
           {copied ? (
             <>
               <Check className="w-3.5 h-3.5 text-green-500" />
-              <span>Copied</span>
+              <span>{t('logs.entry.copied')}</span>
             </>
           ) : (
             <>
               <Copy className="w-3.5 h-3.5" />
-              <span>Copy</span>
+              <span>{t('logs.entry.copy')}</span>
             </>
           )}
         </button>
@@ -138,7 +141,7 @@ export function LogEntry({ log }: LogEntryProps) {
 
         {log.url && (
           <p className="text-xs text-muted-foreground truncate">
-            <span className="opacity-60">URL:</span>{' '}
+            <span className="opacity-60">{t('logs.entry.url')}:</span>{' '}
             <a
               href={log.url}
               target="_blank"

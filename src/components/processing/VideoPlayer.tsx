@@ -11,6 +11,7 @@ import {
   VolumeX,
 } from 'lucide-react';
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import type { TimelineSelection, VideoMetadata } from '@/lib/types';
@@ -37,6 +38,7 @@ export const VideoPlayer = memo(function VideoPlayer({
   selection,
   onSelectVideo,
 }: VideoPlayerProps) {
+  const { t } = useTranslation('pages');
   const videoRef = useRef<HTMLVideoElement>(null);
   const hideTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -153,7 +155,11 @@ export const VideoPlayer = memo(function VideoPlayer({
       {isLoadingVideo || isGeneratingPreview ? (
         <div className="flex flex-col items-center gap-3 text-white/70">
           <Loader2 className="w-10 h-10 animate-spin" />
-          <p className="text-sm">{isGeneratingPreview ? 'Generating preview...' : 'Loading...'}</p>
+          <p className="text-sm">
+            {isGeneratingPreview
+              ? t('processing.player.generatingPreview')
+              : t('processing.player.loading')}
+          </p>
         </div>
       ) : videoSrc ? (
         <>
@@ -189,13 +195,15 @@ export const VideoPlayer = memo(function VideoPlayer({
                     {isUsingPreview && (
                       <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/20 border border-amber-500/30 flex-shrink-0">
                         <Eye className="w-3 h-3 text-amber-400" />
-                        <span className="text-[10px] font-medium text-amber-400">Preview</span>
+                        <span className="text-[10px] font-medium text-amber-400">
+                          {t('processing.player.preview')}
+                        </span>
                       </div>
                     )}
                   </div>
                   {isUsingPreview && (
                     <p className="text-[10px] text-white/50 mt-0.5">
-                      Lower quality for editing - output uses original
+                      {t('processing.player.previewHint')}
                     </p>
                   )}
                 </div>
@@ -206,7 +214,7 @@ export const VideoPlayer = memo(function VideoPlayer({
                   onClick={onSelectVideo}
                 >
                   <Upload className="w-3 h-3 mr-1" />
-                  Change
+                  {t('processing.player.change')}
                 </Button>
               </>
             )}
@@ -308,12 +316,14 @@ export const VideoPlayer = memo(function VideoPlayer({
             <Film className="w-8 h-8 opacity-50" />
           </div>
           <div className="text-center">
-            <p className="font-medium">No video loaded</p>
-            <p className="text-sm text-muted-foreground/70 mt-1">Select a video to start editing</p>
+            <p className="font-medium">{t('processing.player.noVideoLoaded')}</p>
+            <p className="text-sm text-muted-foreground/70 mt-1">
+              {t('processing.player.selectVideoHint')}
+            </p>
           </div>
           <Button onClick={onSelectVideo} className="mt-2">
             <Upload className="w-4 h-4 mr-2" />
-            Select Video
+            {t('processing.player.selectVideo')}
           </Button>
         </div>
       )}

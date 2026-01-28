@@ -1,21 +1,13 @@
 import { RefreshCw, Search, Trash2 } from 'lucide-react';
 import { useCallback, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Input } from '@/components/ui/input';
 import { useHistory } from '@/contexts/HistoryContext';
 import type { HistoryFilter } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
-const filterOptions: { value: HistoryFilter; label: string }[] = [
-  { value: 'all', label: 'All' },
-  { value: 'youtube', label: 'YouTube' },
-  { value: 'tiktok', label: 'TikTok' },
-  { value: 'facebook', label: 'Facebook' },
-  { value: 'instagram', label: 'Instagram' },
-  { value: 'twitter', label: 'Twitter' },
-  { value: 'other', label: 'Other' },
-];
-
 export function HistoryToolbar() {
+  const { t } = useTranslation('pages');
   const {
     filter,
     search,
@@ -29,15 +21,25 @@ export function HistoryToolbar() {
 
   const [clearing, setClearing] = useState(false);
 
+  const filterOptions: { value: HistoryFilter; label: string }[] = [
+    { value: 'all', label: t('library.toolbar.filterAll') },
+    { value: 'youtube', label: t('library.toolbar.filterYouTube') },
+    { value: 'tiktok', label: t('library.toolbar.filterTikTok') },
+    { value: 'facebook', label: t('library.toolbar.filterFacebook') },
+    { value: 'instagram', label: t('library.toolbar.filterInstagram') },
+    { value: 'twitter', label: t('library.toolbar.filterTwitter') },
+    { value: 'other', label: t('library.toolbar.filterOther') },
+  ];
+
   const handleClear = useCallback(async () => {
-    if (!confirm('Are you sure you want to clear all download history?')) return;
+    if (!confirm(t('library.toolbar.clearConfirm'))) return;
     setClearing(true);
     try {
       await clearHistory();
     } finally {
       setClearing(false);
     }
-  }, [clearHistory]);
+  }, [clearHistory, t]);
 
   return (
     <div className="space-y-3">
@@ -48,7 +50,7 @@ export function HistoryToolbar() {
           type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search downloads..."
+          placeholder={t('library.toolbar.searchPlaceholder')}
           className={cn(
             'pl-10 pr-4 h-11 text-sm',
             'bg-background/50 border-border/50',
@@ -93,7 +95,7 @@ export function HistoryToolbar() {
             )}
           >
             <RefreshCw className={cn('w-4 h-4', loading && 'animate-spin')} />
-            Refresh
+            {t('library.toolbar.refresh')}
           </button>
 
           <button
@@ -108,7 +110,7 @@ export function HistoryToolbar() {
             )}
           >
             <Trash2 className="w-4 h-4" />
-            Clear
+            {t('library.toolbar.clear')}
           </button>
         </div>
       </div>

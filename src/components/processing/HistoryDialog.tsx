@@ -13,6 +13,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -35,6 +36,7 @@ export function HistoryDialog({
   onDelete,
   onClearAll,
 }: HistoryDialogProps) {
+  const { t, i18n } = useTranslation('pages');
   const [selectedJob, setSelectedJob] = useState<ProcessingJob | null>(null);
   const [copied, setCopied] = useState(false);
 
@@ -60,7 +62,8 @@ export function HistoryDialog({
 
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
-    return date.toLocaleDateString('vi-VN', {
+    const locale = i18n.language === 'vi' ? 'vi-VN' : 'en-US';
+    return date.toLocaleDateString(locale, {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',
@@ -73,13 +76,21 @@ export function HistoryDialog({
     switch (status) {
       case 'completed':
         return (
-          <Badge className="bg-green-500/10 text-green-500 border-green-500/20">Completed</Badge>
+          <Badge className="bg-green-500/10 text-green-500 border-green-500/20">
+            {t('processing.historyDialog.status.completed')}
+          </Badge>
         );
       case 'failed':
-        return <Badge className="bg-red-500/10 text-red-500 border-red-500/20">Failed</Badge>;
+        return (
+          <Badge className="bg-red-500/10 text-red-500 border-red-500/20">
+            {t('processing.historyDialog.status.failed')}
+          </Badge>
+        );
       case 'cancelled':
         return (
-          <Badge className="bg-yellow-500/10 text-yellow-500 border-yellow-500/20">Cancelled</Badge>
+          <Badge className="bg-yellow-500/10 text-yellow-500 border-yellow-500/20">
+            {t('processing.historyDialog.status.cancelled')}
+          </Badge>
         );
       default:
         return <Badge variant="secondary">{status}</Badge>;
@@ -93,7 +104,7 @@ export function HistoryDialog({
           <div className="flex items-center justify-between pr-8">
             <DialogTitle className="flex items-center gap-2">
               <History className="w-5 h-5" />
-              Processing History
+              {t('processing.historyDialog.title')}
             </DialogTitle>
             {history.length > 0 && (
               <Button
@@ -106,7 +117,7 @@ export function HistoryDialog({
                 }}
               >
                 <Trash2 className="w-4 h-4" />
-                Clear All
+                {t('processing.historyDialog.clearAll')}
               </Button>
             )}
           </div>
@@ -122,7 +133,9 @@ export function HistoryDialog({
                     <div className="w-12 h-12 rounded-full bg-muted/50 flex items-center justify-center mb-3">
                       <History className="w-6 h-6 text-muted-foreground/50" />
                     </div>
-                    <p className="text-sm text-muted-foreground">No processing history</p>
+                    <p className="text-sm text-muted-foreground">
+                      {t('processing.historyDialog.noHistory')}
+                    </p>
                   </div>
                 ) : (
                   history.map((job) => (
@@ -184,7 +197,7 @@ export function HistoryDialog({
                           className="gap-1.5"
                         >
                           <FolderOpen className="w-4 h-4" />
-                          Open Folder
+                          {t('processing.historyDialog.openFolder')}
                         </Button>
                       )}
                       <Button
@@ -206,7 +219,7 @@ export function HistoryDialog({
                     <div className="space-y-2">
                       <div className="flex items-center gap-2 text-sm font-medium">
                         <MessageSquare className="w-4 h-4 text-primary" />
-                        Prompt
+                        {t('processing.historyDialog.prompt')}
                       </div>
                       <div className="p-3 rounded-lg bg-primary/5 border border-primary/10">
                         <p className="text-sm break-words whitespace-pre-wrap">
@@ -221,7 +234,7 @@ export function HistoryDialog({
                     <div className="space-y-2">
                       <div className="flex items-center gap-2 text-sm font-medium">
                         <FileVideo className="w-4 h-4 text-blue-500" />
-                        Input
+                        {t('processing.historyDialog.input')}
                       </div>
                       <div className="p-3 rounded-lg bg-muted/50 border overflow-hidden">
                         <p className="text-xs text-muted-foreground break-all">
@@ -233,7 +246,7 @@ export function HistoryDialog({
                       <div className="space-y-2">
                         <div className="flex items-center gap-2 text-sm font-medium">
                           <FileDown className="w-4 h-4 text-green-500" />
-                          Output
+                          {t('processing.historyDialog.output')}
                         </div>
                         <div className="p-3 rounded-lg bg-muted/50 border overflow-hidden">
                           <p className="text-xs text-muted-foreground break-all">
@@ -249,7 +262,7 @@ export function HistoryDialog({
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2 text-sm font-medium">
                         <Terminal className="w-4 h-4 text-orange-500" />
-                        FFmpeg Command
+                        {t('processing.historyDialog.ffmpegCommand')}
                       </div>
                       <Button
                         variant="ghost"
@@ -260,12 +273,12 @@ export function HistoryDialog({
                         {copied ? (
                           <>
                             <Check className="w-3.5 h-3.5 text-green-500" />
-                            Copied
+                            {t('processing.historyDialog.copied')}
                           </>
                         ) : (
                           <>
                             <Copy className="w-3.5 h-3.5" />
-                            Copy
+                            {t('processing.historyDialog.copy')}
                           </>
                         )}
                       </Button>
@@ -282,7 +295,7 @@ export function HistoryDialog({
                     <div className="space-y-2">
                       <div className="flex items-center gap-2 text-sm font-medium text-red-500">
                         <AlertCircle className="w-4 h-4" />
-                        Error
+                        {t('processing.historyDialog.error')}
                       </div>
                       <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20">
                         <p className="text-sm text-red-500 break-words whitespace-pre-wrap">
@@ -296,12 +309,13 @@ export function HistoryDialog({
                   <div className="flex items-center gap-4 text-xs text-muted-foreground pt-2 border-t flex-wrap">
                     <div className="flex items-center gap-1.5">
                       <Calendar className="w-3.5 h-3.5" />
-                      Created: {formatDate(selectedJob.created_at)}
+                      {t('processing.historyDialog.created')}: {formatDate(selectedJob.created_at)}
                     </div>
                     {selectedJob.completed_at && (
                       <div className="flex items-center gap-1.5">
                         <Check className="w-3.5 h-3.5" />
-                        Completed: {formatDate(selectedJob.completed_at)}
+                        {t('processing.historyDialog.completed')}:{' '}
+                        {formatDate(selectedJob.completed_at)}
                       </div>
                     )}
                   </div>
@@ -312,7 +326,7 @@ export function HistoryDialog({
                 <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center mb-4">
                   <FileVideo className="w-8 h-8 text-muted-foreground/50" />
                 </div>
-                <p className="text-muted-foreground">Select a job to view details</p>
+                <p className="text-muted-foreground">{t('processing.historyDialog.selectJob')}</p>
               </div>
             )}
           </div>

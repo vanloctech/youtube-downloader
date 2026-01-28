@@ -1,10 +1,12 @@
 import { FolderDown } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { HistoryItem, HistoryToolbar } from '@/components/history';
 import { ThemePicker } from '@/components/settings/ThemePicker';
 import { useHistory } from '@/contexts/HistoryContext';
 import { cn } from '@/lib/utils';
 
 export function HistoryPage() {
+  const { t } = useTranslation('pages');
   const { entries, loading, totalCount } = useHistory();
 
   return (
@@ -12,10 +14,10 @@ export function HistoryPage() {
       {/* Header */}
       <header className="flex-shrink-0 flex items-center justify-between h-12 sm:h-14 px-4 sm:px-6">
         <div className="flex items-center gap-3">
-          <h1 className="text-base sm:text-lg font-semibold">Library</h1>
+          <h1 className="text-base sm:text-lg font-semibold">{t('library.title')}</h1>
           {totalCount > 0 && (
             <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
-              {totalCount} downloads
+              {t('library.downloads', { count: totalCount })}
             </span>
           )}
         </div>
@@ -40,7 +42,7 @@ export function HistoryPage() {
           <div className="flex-1 min-h-0 overflow-y-auto">
             {loading && entries.length === 0 ? (
               <div className="flex items-center justify-center h-full">
-                <div className="animate-pulse text-muted-foreground">Loading history...</div>
+                <div className="animate-pulse text-muted-foreground">{t('library.loading')}</div>
               </div>
             ) : entries.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full text-center py-12">
@@ -52,10 +54,9 @@ export function HistoryPage() {
                 >
                   <FolderDown className="w-8 h-8" />
                 </div>
-                <h3 className="text-lg font-semibold mb-2">No downloads yet</h3>
+                <h3 className="text-lg font-semibold mb-2">{t('library.emptyTitle')}</h3>
                 <p className="text-sm text-muted-foreground max-w-md">
-                  Your download history will appear here. Start downloading videos from YouTube or
-                  other platforms to see them in your library.
+                  {t('library.emptyDescription')}
                 </p>
               </div>
             ) : (

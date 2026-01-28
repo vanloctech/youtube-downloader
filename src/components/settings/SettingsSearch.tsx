@@ -1,5 +1,6 @@
 import { Search, X } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import {
@@ -13,6 +14,7 @@ interface SettingsSearchProps {
 }
 
 export function SettingsSearch({ onNavigate }: SettingsSearchProps) {
+  const { t } = useTranslation('settings');
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchableSetting[]>([]);
   const [isOpen, setIsOpen] = useState(false);
@@ -86,7 +88,7 @@ export function SettingsSearch({ onNavigate }: SettingsSearchProps) {
         <Input
           ref={inputRef}
           type="text"
-          placeholder="Search settings..."
+          placeholder={t('search.placeholder')}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={handleKeyDown}

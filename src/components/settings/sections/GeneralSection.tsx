@@ -1,4 +1,5 @@
 import { Check, Database, Film, Moon, Palette, Sun } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import {
   Select,
   SelectContent,
@@ -15,6 +16,11 @@ import { themes } from '@/lib/themes';
 import { cn } from '@/lib/utils';
 import { SettingsDivider, SettingsRow, SettingsSection } from '../SettingsSection';
 
+const SUPPORTED_LANGUAGES = [
+  { code: 'en', name: 'English', flag: '🇬🇧' },
+  { code: 'vi', name: 'Tiếng Việt', flag: '🇻🇳' },
+];
+
 // Gradient backgrounds for theme preview
 const themeGradients: Record<ThemeName, string> = {
   midnight: 'bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500',
@@ -30,9 +36,14 @@ interface GeneralSectionProps {
 }
 
 export function GeneralSection({ highlightId }: GeneralSectionProps) {
+  const { t, i18n } = useTranslation('common');
   const { theme, setTheme, mode, setMode } = useTheme();
   const { settings, updateEmbedMetadata, updateEmbedThumbnail } = useDownload();
   const { maxEntries, setMaxEntries, totalCount } = useHistory();
+
+  const handleLanguageChange = (langCode: string) => {
+    i18n.changeLanguage(langCode);
+  };
 
   return (
     <div className="space-y-8">
@@ -77,6 +88,33 @@ export function GeneralSection({ highlightId }: GeneralSectionProps) {
               <Moon className="w-4 h-4" />
               Dark
             </button>
+          </div>
+        </SettingsRow>
+
+        {/* Language */}
+        <SettingsRow
+          id="language"
+          label={t('language.label')}
+          description={t('language.select')}
+          highlight={highlightId === 'language'}
+        >
+          <div className="flex items-center gap-1 p-1 rounded-xl bg-muted/50">
+            {SUPPORTED_LANGUAGES.map((lang) => (
+              <button
+                key={lang.code}
+                type="button"
+                onClick={() => handleLanguageChange(lang.code)}
+                className={cn(
+                  'flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all',
+                  i18n.language?.startsWith(lang.code)
+                    ? 'bg-background text-foreground shadow-md'
+                    : 'text-muted-foreground hover:text-foreground',
+                )}
+              >
+                <span>{lang.flag}</span>
+                <span className="hidden sm:inline">{lang.name}</span>
+              </button>
+            ))}
           </div>
         </SettingsRow>
 

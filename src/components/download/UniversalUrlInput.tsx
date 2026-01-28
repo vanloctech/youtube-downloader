@@ -1,5 +1,6 @@
 import { ClipboardPaste, FileText, Globe, List, Loader2, Plus } from 'lucide-react';
 import { useCallback, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -29,6 +30,7 @@ export function UniversalUrlInput({
   onImportFile,
   onImportClipboard,
 }: UniversalUrlInputProps) {
+  const { t } = useTranslation('universal');
   const [value, setValue] = useState('');
   const [isImporting, setIsImporting] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
@@ -163,10 +165,10 @@ export function UniversalUrlInput({
                 ? 'bg-background shadow-sm text-foreground'
                 : 'text-muted-foreground hover:text-foreground',
             )}
-            title="Single URL mode"
+            title={t('urlInput.singleHint')}
           >
             <Globe className="w-3.5 h-3.5" />
-            <span>Single</span>
+            <span>{t('urlInput.single')}</span>
           </button>
           <button
             type="button"
@@ -178,15 +180,15 @@ export function UniversalUrlInput({
                 ? 'bg-background shadow-sm text-foreground'
                 : 'text-muted-foreground hover:text-foreground',
             )}
-            title="Multiple URLs mode"
+            title={t('urlInput.multipleHint')}
           >
             <List className="w-3.5 h-3.5" />
-            <span>Multiple</span>
+            <span>{t('urlInput.multiple')}</span>
           </button>
         </div>
 
         <span className="text-xs text-muted-foreground hidden sm:inline">
-          {isExpanded ? 'Add multiple URLs (one per line)' : 'Paste any video URL'}
+          {isExpanded ? t('urlInput.multipleHint') : t('urlInput.singleHint')}
         </span>
       </div>
 
@@ -198,7 +200,7 @@ export function UniversalUrlInput({
               <Globe className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
                 ref={inputRef}
-                placeholder="Paste video URL (TikTok, Instagram, Twitter, etc.)..."
+                placeholder={t('urlInput.placeholder')}
                 value={value}
                 onChange={handleInputChange}
                 onKeyDown={handleKeyDown}
@@ -212,7 +214,10 @@ export function UniversalUrlInput({
               />
               {urlCount > 0 && (
                 <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded">
-                  {urlCount} URL{urlCount !== 1 ? 's' : ''}
+                  {urlCount}{' '}
+                  {urlCount !== 1
+                    ? t('urlInput.urlCount_plural', { count: urlCount })
+                    : t('urlInput.urlCount', { count: urlCount })}
                 </span>
               )}
             </div>
@@ -221,21 +226,21 @@ export function UniversalUrlInput({
               className="h-11 px-4 rounded-md font-medium text-sm btn-gradient flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
               onClick={handleAdd}
               disabled={disabled || !value.trim() || isAdding}
-              title="Add URL to queue"
+              title={t('urlInput.add')}
             >
               {isAdding ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
               ) : (
                 <Plus className="w-4 h-4" />
               )}
-              <span className="hidden sm:inline">Add</span>
+              <span className="hidden sm:inline">{t('urlInput.add')}</span>
             </button>
           </div>
         ) : (
           <div className="relative">
             <Textarea
               ref={textareaRef}
-              placeholder="Paste video URLs here (one per line)&#10;https://www.tiktok.com/...&#10;https://www.instagram.com/...&#10;https://twitter.com/..."
+              placeholder={t('urlInput.placeholderMultiple')}
               value={value}
               onChange={handleInputChange}
               onKeyDown={handleKeyDown}
@@ -250,7 +255,10 @@ export function UniversalUrlInput({
             {urlCount > 0 && (
               <div className="absolute bottom-2 right-2">
                 <span className="text-xs text-muted-foreground bg-background/80 px-2 py-1 rounded">
-                  {urlCount} URL{urlCount !== 1 ? 's' : ''}
+                  {urlCount}{' '}
+                  {urlCount !== 1
+                    ? t('urlInput.urlCount_plural', { count: urlCount })
+                    : t('urlInput.urlCount', { count: urlCount })}
                 </span>
               </div>
             )}
@@ -266,10 +274,10 @@ export function UniversalUrlInput({
             className="h-9 px-4 rounded-md font-medium text-sm btn-gradient flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             onClick={handleAdd}
             disabled={disabled || !value.trim() || isAdding}
-            title="Add all URLs to queue"
+            title={t('urlInput.addToQueue')}
           >
             {isAdding ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-            Add to Queue {urlCount > 0 ? `(${urlCount})` : ''}
+            {t('urlInput.addToQueue')} {urlCount > 0 ? `(${urlCount})` : ''}
           </button>
         )}
 
@@ -280,14 +288,14 @@ export function UniversalUrlInput({
             onClick={handleImportClipboard}
             disabled={disabled || isImporting}
             className="h-8 gap-1.5 text-xs"
-            title="Paste from clipboard"
+            title={t('urlInput.paste')}
           >
             {isImporting ? (
               <Loader2 className="w-3.5 h-3.5 animate-spin" />
             ) : (
               <ClipboardPaste className="w-3.5 h-3.5" />
             )}
-            <span className="hidden xs:inline">Paste</span>
+            <span className="hidden xs:inline">{t('urlInput.paste')}</span>
           </Button>
 
           <Button
@@ -296,10 +304,10 @@ export function UniversalUrlInput({
             onClick={handleImportFile}
             disabled={disabled || isImporting}
             className="h-8 gap-1.5 text-xs"
-            title="Import URLs from .txt file"
+            title={t('urlInput.import')}
           >
             <FileText className="w-3.5 h-3.5" />
-            <span className="hidden xs:inline">Import</span>
+            <span className="hidden xs:inline">{t('urlInput.import')}</span>
           </Button>
         </div>
 
@@ -307,7 +315,7 @@ export function UniversalUrlInput({
           <kbd className="px-1.5 py-0.5 rounded bg-muted font-mono text-[10px]">⌘</kbd>
           <span>+</span>
           <kbd className="px-1.5 py-0.5 rounded bg-muted font-mono text-[10px]">↵</kbd>
-          <span className="ml-1">to add</span>
+          <span className="ml-1">{t('urlInput.toAdd')}</span>
         </div>
       </div>
 
@@ -316,7 +324,7 @@ export function UniversalUrlInput({
         <div className="absolute inset-0 bg-primary/10 backdrop-blur-sm rounded-xl flex items-center justify-center z-10">
           <div className="text-center">
             <List className="w-8 h-8 text-primary mx-auto mb-2" />
-            <p className="text-sm font-medium">Drop URLs or .txt file here</p>
+            <p className="text-sm font-medium">{t('urlInput.dropHint')}</p>
           </div>
         </div>
       )}

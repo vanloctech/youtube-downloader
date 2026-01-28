@@ -1,0 +1,86 @@
+{
+  "title": "Tải đa năng",
+  "urlInput": {
+    "single": "Đơn",
+    "multiple": "Nhiều",
+    "singleHint": "Dán bất kỳ URL video nào",
+    "multipleHint": "Thêm nhiều URL (mỗi dòng một URL)",
+    "placeholder": "Dán URL video (TikTok, Instagram, Twitter, v.v.)...",
+    "placeholderMultiple": "Dán các URL video vào đây (mỗi dòng một URL)\nhttps://www.tiktok.com/...\nhttps://www.instagram.com/...\nhttps://twitter.com/...",
+    "add": "Thêm",
+    "addToQueue": "Thêm vào hàng đợi",
+    "paste": "Dán",
+    "import": "Nhập",
+    "toAdd": "để thêm",
+    "urlCount": "{{count}} URL",
+    "urlCount_plural": "{{count}} URL",
+    "dropHint": "Thả URL hoặc file .txt vào đây"
+  },
+  "settings": {
+    "video": "Video",
+    "audio": "Âm thanh",
+    "quality": "Chất lượng",
+    "format": "Định dạng",
+    "audioQuality": "Chất lượng âm thanh",
+    "bestAudio": "Tốt nhất (~160k)",
+    "standardAudio": "Tiêu chuẩn (128k)",
+    "parallelDownloads": "Tải song song",
+    "atATime": "{{count}} cùng lúc",
+    "saveTo": "Lưu vào",
+    "selectFolder": "Chọn thư mục...",
+    "outputFolder": "Thư mục xuất: {{path}}",
+    "notSelected": "Chưa chọn",
+    "totalFileSize": "Tổng dung lượng",
+    "videoQuality": "Chất lượng video",
+    "outputFormat": "Định dạng xuất",
+    "advanced": "Cài đặt nâng cao",
+    "more": "Thêm"
+  },
+  "quality": {
+    "best": "Tốt nhất",
+    "bestShort": "Tốt nhất",
+    "1080": "Full HD 1080p",
+    "1080Short": "1080p",
+    "720": "HD 720p",
+    "720Short": "720p",
+    "480": "SD 480p",
+    "480Short": "480p",
+    "360": "Thấp 360p",
+    "360Short": "360p",
+    "audio": "Chỉ âm thanh",
+    "audioShort": "Âm thanh"
+  },
+  "queue": {
+    "title": "Hàng đợi",
+    "pending": "{{count}} đang chờ",
+    "clearDone": "Xóa đã xong",
+    "remove": "Xóa khỏi hàng đợi",
+    "videosInQueue": "{{count}} video trong hàng đợi",
+    "videosInQueue_plural": "{{count}} video trong hàng đợi",
+    "clearCompleted": "Xóa {{count}} đã xong",
+    "empty": {
+      "title": "Không có video trong hàng đợi",
+      "description": "Hỗ trợ <1>1,800+</1> trang web qua yt-dlp",
+      "moreCount": "1,790 trang khác",
+      "viewFullList": "Xem danh sách đầy đủ các trang hỗ trợ"
+    },
+    "status": {
+      "pending": "Đang chờ",
+      "fetching": "Đang lấy",
+      "downloading": "Đang tải",
+      "completed": "Hoàn thành",
+      "failed": "Thất bại"
+    },
+    "summarize": "Tóm tắt",
+    "fetchingTranscript": "Đang lấy phụ đề...",
+    "generating": "Đang tạo...",
+    "showMore": "Xem thêm",
+    "showLess": "Thu gọn",
+    "regenerateSummary": "Tạo lại tóm tắt"
+  },
+  "actions": {
+    "startDownload": "Bắt đầu tải",
+    "stopDownload": "Dừng tải",
+    "clearAll": "Xóa tất cả khỏi hàng đợi"
+  }
+}

@@ -1,4 +1,5 @@
 import { Globe, Info, Package, Palette, Sparkles } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
 import type { SettingsSectionId } from './searchable-settings';
 
@@ -7,18 +8,28 @@ interface SettingsSidebarProps {
   onSectionChange: (section: SettingsSectionId) => void;
 }
 
-const SECTIONS: { id: SettingsSectionId; label: string; icon: React.ReactNode }[] = [
-  { id: 'general', label: 'General', icon: <Palette className="w-4 h-4" /> },
-  { id: 'dependencies', label: 'Dependencies', icon: <Package className="w-4 h-4" /> },
-  { id: 'ai', label: 'AI Features', icon: <Sparkles className="w-4 h-4" /> },
-  { id: 'network', label: 'Network & Auth', icon: <Globe className="w-4 h-4" /> },
-  { id: 'about', label: 'About', icon: <Info className="w-4 h-4" /> },
-];
+const SECTION_ICONS: Record<SettingsSectionId, React.ReactNode> = {
+  general: <Palette className="w-4 h-4" />,
+  dependencies: <Package className="w-4 h-4" />,
+  ai: <Sparkles className="w-4 h-4" />,
+  network: <Globe className="w-4 h-4" />,
+  about: <Info className="w-4 h-4" />,
+};
 
 export function SettingsSidebar({ activeSection, onSectionChange }: SettingsSidebarProps) {
+  const { t } = useTranslation('settings');
+
+  const sections: { id: SettingsSectionId; labelKey: string }[] = [
+    { id: 'general', labelKey: 'sections.general' },
+    { id: 'dependencies', labelKey: 'sections.dependencies' },
+    { id: 'ai', labelKey: 'sections.ai' },
+    { id: 'network', labelKey: 'sections.network' },
+    { id: 'about', labelKey: 'sections.about' },
+  ];
+
   return (
     <nav className="w-52 flex-shrink-0 border-r border-border/50 p-3 space-y-1">
-      {SECTIONS.map((section) => (
+      {sections.map((section) => (
         <button
           key={section.id}
           type="button"
@@ -36,9 +47,9 @@ export function SettingsSidebar({ activeSection, onSectionChange }: SettingsSide
               activeSection === section.id ? 'text-primary' : 'text-muted-foreground',
             )}
           >
-            {section.icon}
+            {SECTION_ICONS[section.id]}
           </span>
-          {section.label}
+          {t(section.labelKey)}
         </button>
       ))}
     </nav>

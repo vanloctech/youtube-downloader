@@ -12,6 +12,7 @@ import {
   Youtube,
 } from 'lucide-react';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useTheme } from '@/contexts/ThemeContext';
 import { cn } from '@/lib/utils';
@@ -32,49 +33,50 @@ interface SidebarProps {
 
 interface NavItem {
   id: Page;
-  label: string;
+  labelKey: string;
   icon: React.ReactNode;
 }
 
 const navItems: NavItem[] = [
   {
     id: 'youtube',
-    label: 'YouTube',
+    labelKey: 'sidebar.youtube',
     icon: <Youtube className="w-5 h-5" />,
   },
   {
     id: 'universal',
-    label: 'Universal',
+    labelKey: 'sidebar.universal',
     icon: <Globe className="w-5 h-5" />,
   },
   {
     id: 'summary',
-    label: 'AI Summary',
+    labelKey: 'sidebar.summary',
     icon: <Sparkles className="w-5 h-5" />,
   },
   {
     id: 'processing',
-    label: 'Processing',
+    labelKey: 'sidebar.processing',
     icon: <Wand2 className="w-5 h-5" />,
   },
   {
     id: 'library',
-    label: 'Library',
+    labelKey: 'sidebar.library',
     icon: <FolderDown className="w-5 h-5" />,
   },
   {
     id: 'logs',
-    label: 'Logs',
+    labelKey: 'sidebar.logs',
     icon: <ScrollText className="w-5 h-5" />,
   },
   {
     id: 'settings',
-    label: 'Settings',
+    labelKey: 'sidebar.settings',
     icon: <Settings className="w-5 h-5" />,
   },
 ];
 
 export function Sidebar({ currentPage, onPageChange }: SidebarProps) {
+  const { t } = useTranslation('common');
   const [isCollapsed, setIsCollapsed] = useState(true);
   const { mode, toggleMode } = useTheme();
 
@@ -161,7 +163,7 @@ export function Sidebar({ currentPage, onPageChange }: SidebarProps) {
                       isCollapsed ? 'opacity-0 w-0' : 'opacity-100',
                     )}
                   >
-                    {item.label}
+                    {t(item.labelKey)}
                   </span>
 
                   {/* Active indicator */}
@@ -172,7 +174,7 @@ export function Sidebar({ currentPage, onPageChange }: SidebarProps) {
               </TooltipTrigger>
               {isCollapsed && (
                 <TooltipContent side="right" className="font-medium">
-                  {item.label}
+                  {t(item.labelKey)}
                 </TooltipContent>
               )}
             </Tooltip>
@@ -210,13 +212,13 @@ export function Sidebar({ currentPage, onPageChange }: SidebarProps) {
                     isCollapsed ? 'opacity-0 w-0' : 'opacity-100',
                   )}
                 >
-                  {mode === 'dark' ? 'Light' : 'Dark'}
+                  {mode === 'dark' ? t('sidebar.light') : t('sidebar.dark')}
                 </span>
               </button>
             </TooltipTrigger>
             {isCollapsed && (
               <TooltipContent side="right" className="font-medium">
-                {mode === 'dark' ? 'Light Mode' : 'Dark Mode'}
+                {mode === 'dark' ? t('sidebar.lightMode') : t('sidebar.darkMode')}
               </TooltipContent>
             )}
           </Tooltip>
@@ -247,13 +249,13 @@ export function Sidebar({ currentPage, onPageChange }: SidebarProps) {
                     isCollapsed ? 'opacity-0 w-0' : 'opacity-100',
                   )}
                 >
-                  Collapse
+                  {t('sidebar.collapse')}
                 </span>
               </button>
             </TooltipTrigger>
             {isCollapsed && (
               <TooltipContent side="right" className="font-medium">
-                Expand
+                {t('sidebar.expand')}
               </TooltipContent>
             )}
           </Tooltip>

@@ -16,6 +16,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { SimpleMarkdown } from '@/components/ui/simple-markdown';
 import { useAI } from '@/contexts/AIContext';
 import { useHistory } from '@/contexts/HistoryContext';
@@ -27,16 +28,19 @@ interface HistoryItemProps {
 }
 
 // Format file size
-function formatSize(bytes?: number): string {
-  if (!bytes) return 'Unknown';
+function formatSize(bytes: number | undefined, unknownLabel: string): string {
+  if (!bytes) return unknownLabel;
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
 }
 
-// Format relative time
-function formatRelativeTime(dateStr: string): string {
+// Format relative time with translations
+function formatRelativeTime(
+  dateStr: string,
+  t: (key: string, options?: Record<string, unknown>) => string,
+): string {
   const date = new Date(dateStr);
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
@@ -44,32 +48,60 @@ function formatRelativeTime(dateStr: string): string {
   const diffHours = Math.floor(diffMs / 3600000);
   const diffDays = Math.floor(diffMs / 86400000);
 
-  if (diffMins < 1) return 'Just now';
-  if (diffMins < 60) return `${diffMins}m ago`;
-  if (diffHours < 24) return `${diffHours}h ago`;
-  if (diffDays < 7) return `${diffDays}d ago`;
+  if (diffMins < 1) return t('library.item.justNow');
+  if (diffMins < 60) return t('library.item.minutesAgo', { count: diffMins });
+  if (diffHours < 24) return t('library.item.hoursAgo', { count: diffHours });
+  if (diffDays < 7) return t('library.item.daysAgo', { count: diffDays });
   return date.toLocaleDateString();
 }
 
 // Get source config
-function getSourceConfig(source?: string): { icon: string; label: string; color: string } {
+function getSourceConfig(
+  source: string | undefined,
+  t: (key: string) => string,
+): { icon: string; label: string; color: string } {
   switch (source?.toLowerCase()) {
     case 'youtube':
-      return { icon: 'fa-youtube-play', label: 'YouTube', color: 'text-red-500 bg-red-500/10' };
+      return {
+        icon: 'fa-youtube-play',
+        label: t('library.item.sources.youtube'),
+        color: 'text-red-500 bg-red-500/10',
+      };
     case 'tiktok':
-      return { icon: 'fa-music', label: 'TikTok', color: 'text-pink-500 bg-pink-500/10' };
+      return {
+        icon: 'fa-music',
+        label: t('library.item.sources.tiktok'),
+        color: 'text-pink-500 bg-pink-500/10',
+      };
     case 'facebook':
-      return { icon: 'fa-facebook', label: 'Facebook', color: 'text-blue-600 bg-blue-600/10' };
+      return {
+        icon: 'fa-facebook',
+        label: t('library.item.sources.facebook'),
+        color: 'text-blue-600 bg-blue-600/10',
+      };
     case 'instagram':
-      return { icon: 'fa-instagram', label: 'Instagram', color: 'text-pink-600 bg-pink-600/10' };
+      return {
+        icon: 'fa-instagram',
+        label: t('library.item.sources.instagram'),
+        color: 'text-pink-600 bg-pink-600/10',
+      };
     case 'twitter':
-      return { icon: 'fa-twitter', label: 'Twitter', color: 'text-sky-500 bg-sky-500/10' };
+      return {
+        icon: 'fa-twitter',
+        label: t('library.item.sources.twitter'),
+        color: 'text-sky-500 bg-sky-500/10',
+      };
     default:
-      return { icon: 'fa-globe', label: 'Other', color: 'text-gray-500 bg-gray-500/10' };
+      return {
+        icon: 'fa-globe',
+        label: t('library.item.sources.other'),
+        color: 'text-gray-500 bg-gray-500/10',
+      };
   }
 }
 
 export function HistoryItem({ entry }: HistoryItemProps) {
+  const { t } = useTranslation('pages');
   const { openFileLocation, deleteEntry, redownload, getRedownloadTask } = useHistory();
   const ai = useAI();
   const [isDeleting, setIsDeleting] = useState(false);
@@ -85,7 +117,7 @@ export function HistoryItem({ entry }: HistoryItemProps) {
   const redownloadProgress = redownloadTask?.progress || 0;
   const redownloadSpeed = redownloadTask?.speed || '';
 
-  const sourceConfig = getSourceConfig(entry.source);
+  const sourceConfig = getSourceConfig(entry.source, t);
 
   // Reset local summary when entry changes (important for component reuse)
   useEffect(() => {
@@ -118,7 +150,7 @@ export function HistoryItem({ entry }: HistoryItemProps) {
   }, [openFileLocation, entry.filepath]);
 
   const handleDelete = useCallback(async () => {
-    if (!confirm(`Remove "${entry.title}" from history?`)) return;
+    if (!confirm(t('library.item.deleteConfirm', { title: entry.title }))) return;
     setIsDeleting(true);
     try {
       await deleteEntry(entry.id);
@@ -127,17 +159,17 @@ export function HistoryItem({ entry }: HistoryItemProps) {
     } finally {
       setIsDeleting(false);
     }
-  }, [deleteEntry, entry.id, entry.title]);
+  }, [deleteEntry, entry.id, entry.title, t]);
 
   const handleRedownload = useCallback(async () => {
     setRedownloadError(null);
     try {
       await redownload(entry);
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to redownload';
+      const message = error instanceof Error ? error.message : t('library.item.failedToRedownload');
       setRedownloadError(message);
     }
-  }, [redownload, entry]);
+  }, [redownload, entry, t]);
 
   const handleCopyUrl = useCallback(() => {
     navigator.clipboard.writeText(entry.url);
@@ -203,7 +235,9 @@ export function HistoryItem({ entry }: HistoryItemProps) {
             <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
               <div className="text-center">
                 <AlertCircle className="w-6 h-6 text-yellow-500 mx-auto mb-1" />
-                <span className="text-[10px] text-yellow-500 font-medium">File Missing</span>
+                <span className="text-[10px] text-yellow-500 font-medium">
+                  {t('library.item.fileMissing')}
+                </span>
               </div>
             </div>
           )}
@@ -236,11 +270,11 @@ export function HistoryItem({ entry }: HistoryItemProps) {
               )}
               <span className="flex items-center gap-1">
                 <HardDrive className="w-3 h-3" />
-                {formatSize(entry.filesize)}
+                {formatSize(entry.filesize, t('library.item.unknown'))}
               </span>
               <span className="flex items-center gap-1">
                 <Clock className="w-3 h-3" />
-                {formatRelativeTime(entry.downloaded_at)}
+                {formatRelativeTime(entry.downloaded_at, t)}
               </span>
             </div>
 
@@ -265,11 +299,11 @@ export function HistoryItem({ entry }: HistoryItemProps) {
                         >
                           {showFullSummary ? (
                             <>
-                              Show less <ChevronUp className="w-3 h-3" />
+                              {t('library.item.showLess')} <ChevronUp className="w-3 h-3" />
                             </>
                           ) : (
                             <>
-                              Show more <ChevronDown className="w-3 h-3" />
+                              {t('library.item.showMore')} <ChevronDown className="w-3 h-3" />
                             </>
                           )}
                         </button>
@@ -280,7 +314,7 @@ export function HistoryItem({ entry }: HistoryItemProps) {
                         type="button"
                         onClick={handleCopySummary}
                         className="p-1 rounded text-muted-foreground hover:text-purple-500 transition-colors"
-                        title="Copy summary"
+                        title={t('library.item.copySummary')}
                       >
                         {copiedSummary ? (
                           <Check className="w-3 h-3 text-green-500" />
@@ -293,7 +327,7 @@ export function HistoryItem({ entry }: HistoryItemProps) {
                         onClick={handleGenerateSummary}
                         disabled={isGeneratingSummary}
                         className="p-1 rounded text-muted-foreground hover:text-purple-500 transition-colors"
-                        title="Regenerate summary"
+                        title={t('library.item.regenerateSummary')}
                       >
                         {isGeneratingSummary ? (
                           <Loader2 className="w-3 h-3 animate-spin" />
@@ -318,13 +352,13 @@ export function HistoryItem({ entry }: HistoryItemProps) {
                     <>
                       <Loader2 className="w-3 h-3 animate-spin" />
                       {task?.status === 'fetching'
-                        ? 'Fetching transcript...'
-                        : 'Generating summary...'}
+                        ? t('library.item.fetchingTranscript')
+                        : t('library.item.generatingSummary')}
                     </>
                   ) : (
                     <>
                       <Sparkles className="w-3 h-3" />
-                      Generate AI summary
+                      {t('library.item.generateAiSummary')}
                     </>
                   )}
                 </button>
@@ -346,7 +380,7 @@ export function HistoryItem({ entry }: HistoryItemProps) {
               <div className="flex items-center justify-between text-xs">
                 <span className="text-muted-foreground flex items-center gap-1.5">
                   <Loader2 className="w-3 h-3 animate-spin" />
-                  Downloading...
+                  {t('library.item.downloading')}
                 </span>
                 <span className="text-muted-foreground">
                   {redownloadProgress.toFixed(0)}%{redownloadSpeed && ` · ${redownloadSpeed}`}
@@ -378,7 +412,7 @@ export function HistoryItem({ entry }: HistoryItemProps) {
                 )}
               >
                 <FolderOpen className="w-3.5 h-3.5" />
-                Open Folder
+                {t('library.item.openFolder')}
               </button>
             ) : (
               <button
@@ -396,7 +430,7 @@ export function HistoryItem({ entry }: HistoryItemProps) {
                 ) : (
                   <Download className="w-3.5 h-3.5" />
                 )}
-                Re-download
+                {t('library.item.redownload')}
               </button>
             )}
 
@@ -410,7 +444,7 @@ export function HistoryItem({ entry }: HistoryItemProps) {
               )}
             >
               <ExternalLink className="w-3.5 h-3.5" />
-              Open URL
+              {t('library.item.openUrl')}
             </a>
 
             <button
@@ -424,12 +458,12 @@ export function HistoryItem({ entry }: HistoryItemProps) {
               {copied ? (
                 <>
                   <Check className="w-3.5 h-3.5 text-green-500" />
-                  Copied
+                  {t('library.item.copied')}
                 </>
               ) : (
                 <>
                   <Copy className="w-3.5 h-3.5" />
-                  Copy
+                  {t('library.item.copy')}
                 </>
               )}
             </button>
@@ -445,7 +479,7 @@ export function HistoryItem({ entry }: HistoryItemProps) {
               )}
             >
               <Trash2 className="w-3.5 h-3.5" />
-              Delete
+              {t('library.item.delete')}
             </button>
           </div>
         </div>

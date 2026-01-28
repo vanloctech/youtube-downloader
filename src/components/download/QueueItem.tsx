@@ -14,6 +14,7 @@ import {
   XCircle,
 } from 'lucide-react';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { SimpleMarkdown } from '@/components/ui/simple-markdown';
 import { useAI } from '@/contexts/AIContext';
 import type { DownloadItem, ItemDownloadSettings } from '@/lib/types';
@@ -55,6 +56,7 @@ interface QueueItemProps {
 }
 
 export function QueueItem({ item, showPlaylistBadge, disabled, onRemove }: QueueItemProps) {
+  const { t } = useTranslation('download');
   const ai = useAI();
   const [showFullSummary, setShowFullSummary] = useState(false);
 
@@ -201,7 +203,7 @@ export function QueueItem({ item, showPlaylistBadge, disabled, onRemove }: Queue
         {item.isPlaylist && showPlaylistBadge && (
           <div className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded bg-black/70 text-white text-[10px] flex items-center gap-1">
             <ListVideo className="w-3 h-3" />
-            <span>Playlist</span>
+            <span>{t('queue.playlist')}</span>
           </div>
         )}
 
@@ -250,10 +252,13 @@ export function QueueItem({ item, showPlaylistBadge, disabled, onRemove }: Queue
             {isCompleted && <CheckCircle2 className="w-3 h-3" />}
             {isError && <XCircle className="w-3 h-3" />}
             <span>
-              {isPending && 'Pending'}
-              {isActive && (item.status === 'fetching' ? 'Fetching' : 'Downloading')}
-              {isCompleted && 'Completed'}
-              {isError && 'Failed'}
+              {isPending && t('queue.status.pending')}
+              {isActive &&
+                (item.status === 'fetching'
+                  ? t('queue.status.fetching')
+                  : t('queue.status.downloading'))}
+              {isCompleted && t('queue.status.completed')}
+              {isError && t('queue.status.failed')}
             </span>
           </span>
 
@@ -308,7 +313,7 @@ export function QueueItem({ item, showPlaylistBadge, disabled, onRemove }: Queue
               className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-600 dark:text-purple-400 hover:bg-purple-500/20 transition-colors font-medium"
             >
               <Sparkles className="w-3 h-3" />
-              Summarize
+              {t('queue.summarize')}
             </button>
           )}
 
@@ -316,7 +321,9 @@ export function QueueItem({ item, showPlaylistBadge, disabled, onRemove }: Queue
           {isGenerating && (
             <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-600 dark:text-purple-400 font-medium">
               <Loader2 className="w-3 h-3 animate-spin" />
-              {generatingStatus === 'fetching' ? 'Fetching transcript...' : 'Generating...'}
+              {generatingStatus === 'fetching'
+                ? t('queue.fetchingTranscript')
+                : t('queue.generating')}
             </span>
           )}
         </div>
@@ -343,11 +350,11 @@ export function QueueItem({ item, showPlaylistBadge, disabled, onRemove }: Queue
                       >
                         {showFullSummary ? (
                           <>
-                            Show less <ChevronUp className="w-3 h-3" />
+                            {t('queue.showLess')} <ChevronUp className="w-3 h-3" />
                           </>
                         ) : (
                           <>
-                            Show more <ChevronDown className="w-3 h-3" />
+                            {t('queue.showMore')} <ChevronDown className="w-3 h-3" />
                           </>
                         )}
                       </button>
@@ -358,7 +365,7 @@ export function QueueItem({ item, showPlaylistBadge, disabled, onRemove }: Queue
                     onClick={handleGenerateSummary}
                     disabled={isGenerating}
                     className="p-1 rounded text-muted-foreground hover:text-purple-500 transition-colors"
-                    title="Regenerate summary"
+                    title={t('queue.regenerateSummary')}
                   >
                     {isGenerating ? (
                       <Loader2 className="w-3 h-3 animate-spin" />
@@ -382,7 +389,7 @@ export function QueueItem({ item, showPlaylistBadge, disabled, onRemove }: Queue
         type="button"
         onClick={() => onRemove(item.id)}
         disabled={disabled}
-        title="Remove from queue"
+        title={t('queue.remove')}
         className={cn(
           'absolute top-2 right-2 p-1.5 rounded-full transition-all',
           'bg-black/50 hover:bg-black/70 text-white/70 hover:text-white',

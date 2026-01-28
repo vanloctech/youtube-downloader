@@ -1,4 +1,5 @@
 import { CheckCircle2, Trash2, Youtube } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -26,6 +27,7 @@ export function QueueList({
   onRemove,
   onClearCompleted,
 }: QueueListProps) {
+  const { t } = useTranslation('download');
   const completedCount = items.filter((i) => i.status === 'completed').length;
   const pendingCount = items.filter((i) => i.status === 'pending').length;
   const totalCount = items.length;
@@ -36,11 +38,11 @@ export function QueueList({
       {totalCount > 0 && (
         <div className="flex items-center justify-between py-2 px-1 gap-2">
           <div className="flex items-center gap-2">
-            <h2 className="text-sm font-medium">Queue</h2>
+            <h2 className="text-sm font-medium">{t('queue.title')}</h2>
             <div className="flex items-center gap-1.5">
               {pendingCount > 0 && (
                 <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
-                  {pendingCount} pending
+                  {t('queue.pending', { count: pendingCount })}
                 </Badge>
               )}
               {completedCount > 0 && (
@@ -72,7 +74,7 @@ export function QueueList({
               className="h-7 text-xs px-2 text-muted-foreground hover:text-foreground"
             >
               <Trash2 className="w-3 h-3 mr-1.5" />
-              Clear done
+              {t('queue.clearDone')}
             </Button>
           )}
         </div>
@@ -84,9 +86,9 @@ export function QueueList({
           <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center mb-4">
             <Youtube className="w-10 h-10 text-primary/50" />
           </div>
-          <h3 className="text-base font-medium mb-1">No videos yet</h3>
+          <h3 className="text-base font-medium mb-1">{t('queue.empty.title')}</h3>
           <p className="text-sm text-muted-foreground text-center max-w-[240px]">
-            Paste a YouTube URL above to start downloading videos
+            {t('queue.empty.description')}
           </p>
         </div>
       ) : (

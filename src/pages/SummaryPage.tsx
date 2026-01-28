@@ -15,6 +15,7 @@ import {
   X,
 } from 'lucide-react';
 import { useCallback, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ThemePicker } from '@/components/settings/ThemePicker';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -48,6 +49,7 @@ function isYouTubeUrl(url: string) {
 }
 
 export function SummaryPage() {
+  const { t } = useTranslation('pages');
   const ai = useAI();
   const { cookieSettings, getProxyUrl } = useDownload();
 
@@ -76,22 +78,22 @@ export function SummaryPage() {
 
   const handleSummarize = useCallback(async () => {
     if (!url.trim()) {
-      setError('Please enter a YouTube URL');
+      setError(t('summary.errors.enterUrl'));
       return;
     }
 
     if (!isYouTubeUrl(url)) {
-      setError('Please enter a valid YouTube URL');
+      setError(t('summary.errors.invalidUrl'));
       return;
     }
 
     if (!ai.config.enabled) {
-      setError('AI is not enabled. Please enable AI in Settings first.');
+      setError(t('summary.errors.aiNotEnabled'));
       return;
     }
 
     if (!ai.config.api_key) {
-      setError('API key is not configured. Please add your API key in Settings.');
+      setError(t('summary.errors.noApiKey'));
       return;
     }
 
@@ -103,7 +105,7 @@ export function SummaryPage() {
 
     try {
       // Step 1: Fetch video info
-      setLoadingStatus('Fetching video info...');
+      setLoadingStatus(t('summary.loading.fetchingInfo'));
       const videoInfoResponse = await invoke<{
         info: {
           title: string;
@@ -130,7 +132,7 @@ export function SummaryPage() {
       }
 
       // Step 2: Fetch transcript
-      setLoadingStatus('Fetching transcript...');
+      setLoadingStatus(t('summary.loading.fetchingTranscript'));
       const transcript = await invoke<string>('get_video_transcript', {
         url: url.trim(),
         languages: transcriptLanguages,
@@ -148,7 +150,7 @@ export function SummaryPage() {
       }
 
       // Step 3: Generate summary with local settings
-      setLoadingStatus('Generating summary...');
+      setLoadingStatus(t('summary.loading.generating'));
       const summaryResult = await invoke<{ summary: string }>('generate_summary_with_options', {
         transcript,
         style: summaryStyle,
@@ -185,6 +187,7 @@ export function SummaryPage() {
     transcriptLanguages,
     cookieSettings,
     getProxyUrl,
+    t,
   ]);
 
   const handleStop = useCallback(() => {
@@ -211,7 +214,7 @@ export function SummaryPage() {
     console.log('Saving to library:', { videoInfo, summary: summary.substring(0, 50) });
 
     if (!videoInfo.title) {
-      setError('Cannot save: video title is missing');
+      setError(t('summary.errors.noTitle'));
       return;
     }
 
@@ -228,9 +231,9 @@ export function SummaryPage() {
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       console.error('Failed to save to library:', message);
-      setError(`Failed to save to library: ${message}`);
+      setError(t('summary.errors.saveToLibrary', { message }));
     }
-  }, [result]);
+  }, [result, t]);
 
   const handleAddLanguage = useCallback(
     (code: string) => {
@@ -277,7 +280,7 @@ export function SummaryPage() {
       <header className="flex-shrink-0 flex items-center justify-between h-12 sm:h-14 px-4 sm:px-6">
         <div className="flex items-center gap-2">
           <Sparkles className="w-5 h-5 text-primary" />
-          <h1 className="text-base sm:text-lg font-semibold">AI Summary</h1>
+          <h1 className="text-base sm:text-lg font-semibold">{t('summary.title')}</h1>
         </div>
         <ThemePicker />
       </header>
@@ -292,7 +295,7 @@ export function SummaryPage() {
           <div className="relative flex-1">
             <Link className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
-              placeholder="Paste YouTube URL here..."
+              placeholder={t('summary.placeholder')}
               value={url}
               onChange={(e) => setUrl(e.target.value)}
               onKeyDown={handleKeyDown}
@@ -316,7 +319,7 @@ export function SummaryPage() {
               onClick={handleStop}
             >
               <Square className="w-4 h-4" />
-              <span>Stop</span>
+              <span>{t('summary.stop')}</span>
             </button>
           ) : (
             <button
@@ -330,7 +333,7 @@ export function SummaryPage() {
               disabled={!url.trim()}
             >
               <Sparkles className="w-4 h-4" />
-              <span>Summarize</span>
+              <span>{t('summary.summarize')}</span>
             </button>
           )}
         </div>
@@ -339,7 +342,7 @@ export function SummaryPage() {
         {isLoading && (
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Loader2 className="w-4 h-4 animate-spin" />
-            <span>{loadingStatus || 'Processing...'}</span>
+            <span>{loadingStatus || t('summary.processing')}</span>
           </div>
         )}
 
@@ -356,7 +359,7 @@ export function SummaryPage() {
             )}
           >
             <Settings2 className="w-3.5 h-3.5" />
-            Options
+            {t('summary.options')}
             {showSettings ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
           </button>
 
@@ -364,7 +367,7 @@ export function SummaryPage() {
             <span className="text-xs text-muted-foreground">
               {summaryStyle.charAt(0).toUpperCase() + summaryStyle.slice(1)} •{' '}
               {summaryLanguage === 'auto'
-                ? 'Auto language'
+                ? t('summary.autoLanguage')
                 : LANGUAGE_OPTIONS.find((l) => l.code === summaryLanguage)?.name || summaryLanguage}
             </span>
           )}
@@ -376,7 +379,9 @@ export function SummaryPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {/* Summary Style */}
               <div className="space-y-1.5">
-                <span className="text-xs font-medium text-muted-foreground">Summary Style</span>
+                <span className="text-xs font-medium text-muted-foreground">
+                  {t('summary.summaryStyle')}
+                </span>
                 <Select
                   value={summaryStyle}
                   onValueChange={(v) => setSummaryStyle(v as SummaryStyle)}
@@ -385,22 +390,24 @@ export function SummaryPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="short">Short (2-3 sentences)</SelectItem>
-                    <SelectItem value="concise">Concise (key points)</SelectItem>
-                    <SelectItem value="detailed">Detailed (comprehensive)</SelectItem>
+                    <SelectItem value="short">{t('summary.short')}</SelectItem>
+                    <SelectItem value="concise">{t('summary.concise')}</SelectItem>
+                    <SelectItem value="detailed">{t('summary.detailed')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
               {/* Summary Language */}
               <div className="space-y-1.5">
-                <span className="text-xs font-medium text-muted-foreground">Output Language</span>
+                <span className="text-xs font-medium text-muted-foreground">
+                  {t('summary.outputLanguage')}
+                </span>
                 <Select value={summaryLanguage} onValueChange={setSummaryLanguage}>
                   <SelectTrigger className="h-9 bg-background/50">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="auto">Auto (same as video)</SelectItem>
+                    <SelectItem value="auto">{t('summary.autoSameAsVideo')}</SelectItem>
                     {LANGUAGE_OPTIONS.map((l) => (
                       <SelectItem key={l.code} value={l.code}>
                         {l.name}
@@ -414,7 +421,7 @@ export function SummaryPage() {
             {/* Transcript Languages */}
             <div className="space-y-2">
               <span className="text-xs font-medium text-muted-foreground">
-                Transcript Languages (priority order)
+                {t('summary.transcriptLanguages')}
               </span>
               <div className="flex flex-wrap gap-2">
                 {transcriptLanguages.map((code, index) => {
@@ -432,7 +439,7 @@ export function SummaryPage() {
                             type="button"
                             onClick={() => handleMoveLanguage(index, 'up')}
                             className="p-0.5 hover:text-primary rounded transition-colors"
-                            title="Move up"
+                            title={t('summary.moveUp')}
                           >
                             <ChevronUp className="w-3.5 h-3.5" />
                           </button>
@@ -442,7 +449,7 @@ export function SummaryPage() {
                             type="button"
                             onClick={() => handleMoveLanguage(index, 'down')}
                             className="p-0.5 hover:text-primary rounded transition-colors"
-                            title="Move down"
+                            title={t('summary.moveDown')}
                           >
                             <ChevronDown className="w-3.5 h-3.5" />
                           </button>
@@ -452,7 +459,7 @@ export function SummaryPage() {
                             type="button"
                             onClick={() => handleRemoveLanguage(code)}
                             className="p-0.5 hover:text-destructive rounded transition-colors ml-0.5"
-                            title="Remove"
+                            title={t('summary.remove')}
                           >
                             <X className="w-3.5 h-3.5" />
                           </button>
@@ -465,7 +472,7 @@ export function SummaryPage() {
                   <Select onValueChange={handleAddLanguage}>
                     <SelectTrigger className="w-auto h-8 px-2.5 gap-1 bg-background/50 border-dashed">
                       <Plus className="w-3.5 h-3.5" />
-                      <span className="text-xs">Add</span>
+                      <span className="text-xs">{t('summary.add')}</span>
                     </SelectTrigger>
                     <SelectContent>
                       {availableLanguages.map((l) => (
@@ -478,7 +485,7 @@ export function SummaryPage() {
                 )}
               </div>
               <p className="text-[11px] text-muted-foreground/70">
-                Will try each language in order until a transcript is found
+                {t('summary.willTryEachLanguage')}
               </p>
             </div>
           </div>
@@ -517,7 +524,7 @@ export function SummaryPage() {
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
                   <Sparkles className="w-4 h-4 text-primary" />
-                  <span className="text-sm font-medium">Summary</span>
+                  <span className="text-sm font-medium">{t('summary.summary')}</span>
                 </div>
                 <div className="flex items-center gap-1">
                   <Button
@@ -529,12 +536,12 @@ export function SummaryPage() {
                     {copied ? (
                       <>
                         <Check className="w-3.5 h-3.5 text-green-500" />
-                        Copied
+                        {t('summary.copied')}
                       </>
                     ) : (
                       <>
                         <Copy className="w-3.5 h-3.5" />
-                        Copy
+                        {t('summary.copy')}
                       </>
                     )}
                   </Button>
@@ -548,12 +555,12 @@ export function SummaryPage() {
                     {saved ? (
                       <>
                         <Check className="w-3.5 h-3.5 text-green-500" />
-                        Saved
+                        {t('summary.saved')}
                       </>
                     ) : (
                       <>
                         <Save className="w-3.5 h-3.5" />
-                        Save to Library
+                        {t('summary.saveToLibrary')}
                       </>
                     )}
                   </Button>
@@ -577,11 +584,11 @@ export function SummaryPage() {
                 >
                   {showFullSummary ? (
                     <>
-                      Show less <ChevronUp className="w-3 h-3" />
+                      {t('summary.showLess')} <ChevronUp className="w-3 h-3" />
                     </>
                   ) : (
                     <>
-                      Show more <ChevronDown className="w-3 h-3" />
+                      {t('summary.showMore')} <ChevronDown className="w-3 h-3" />
                     </>
                   )}
                 </button>
@@ -596,10 +603,9 @@ export function SummaryPage() {
             <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
               <Sparkles className="w-8 h-8 text-primary" />
             </div>
-            <h3 className="text-lg font-medium mb-2">AI Video Summary</h3>
+            <h3 className="text-lg font-medium mb-2">{t('summary.emptyTitle')}</h3>
             <p className="text-sm text-muted-foreground max-w-md">
-              Enter a YouTube URL to generate an AI-powered summary of the video content. No
-              download required.
+              {t('summary.emptyDescription')}
             </p>
           </div>
         )}

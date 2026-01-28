@@ -20,6 +20,7 @@ import {
   X,
 } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   DependenciesSection,
   GeneralSection,
@@ -52,6 +53,7 @@ import { DEFAULT_TRANSCRIPT_LANGUAGES, LANGUAGE_OPTIONS } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
 export function SettingsPage() {
+  const { t } = useTranslation('settings');
   const [activeSection, setActiveSection] = useState<SettingsSectionId>('general');
   const [highlightId, setHighlightId] = useState<string | null>(null);
   const [appVersion, setAppVersion] = useState('');
@@ -97,8 +99,8 @@ export function SettingsPage() {
               <Settings className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h1 className="text-lg font-semibold">Settings</h1>
-              <p className="text-xs text-muted-foreground">Configure your preferences</p>
+              <h1 className="text-lg font-semibold">{t('title')}</h1>
+              <p className="text-xs text-muted-foreground">{t('subtitle')}</p>
             </div>
           </div>
           <SettingsSearch onNavigate={handleSearchNavigate} />
@@ -166,21 +168,22 @@ function AISettingsContent({
   showApiKey: boolean;
   setShowApiKey: (show: boolean) => void;
 }) {
+  const { t } = useTranslation('settings');
   const ai = useAI();
 
   return (
     <div className="space-y-8">
       <SettingsSection
-        title="AI Features"
-        description="Smart video summarization and automation"
+        title={t('ai.title')}
+        description={t('ai.description')}
         icon={<Sparkles className="w-5 h-5 text-white" />}
         iconClassName="bg-gradient-to-br from-purple-500 to-indigo-600 shadow-purple-500/20"
       >
         {/* Enable AI */}
         <SettingsRow
           id="ai-enabled"
-          label="Enable AI Features"
-          description="Use AI for video summarization"
+          label={t('ai.enabled')}
+          description={t('ai.enabledDesc')}
           highlight={highlightId === 'ai-enabled'}
         >
           <Switch
@@ -194,8 +197,8 @@ function AISettingsContent({
             {/* Provider */}
             <SettingsRow
               id="ai-provider"
-              label="AI Provider"
-              description="Choose your AI service"
+              label={t('ai.provider')}
+              description={t('ai.providerDesc')}
               highlight={highlightId === 'ai-provider'}
             >
               <Select
@@ -223,8 +226,8 @@ function AISettingsContent({
                   <SelectItem value="openai">OpenAI</SelectItem>
                   <SelectItem value="deepseek">DeepSeek</SelectItem>
                   <SelectItem value="qwen">Qwen</SelectItem>
-                  <SelectItem value="proxy">Proxy (Custom)</SelectItem>
-                  <SelectItem value="ollama">Ollama (Local)</SelectItem>
+                  <SelectItem value="proxy">{t('ai.proxyCustom')}</SelectItem>
+                  <SelectItem value="ollama">{t('ai.ollamaLocal')}</SelectItem>
                 </SelectContent>
               </Select>
             </SettingsRow>
@@ -238,14 +241,14 @@ function AISettingsContent({
                   highlightId === 'ai-api-key' && 'bg-primary/10 ring-1 ring-primary/30',
                 )}
               >
-                <p className="text-sm font-medium">API Key</p>
+                <p className="text-sm font-medium">{t('ai.apiKey')}</p>
                 <div className="flex items-center gap-2">
                   <div className="relative flex-1">
                     <Input
                       type={showApiKey ? 'text' : 'password'}
                       value={ai.config.api_key || ''}
                       onChange={(e) => ai.updateConfig({ api_key: e.target.value })}
-                      placeholder="Enter API key"
+                      placeholder={t('ai.enterApiKey')}
                       className="h-9 pr-10"
                     />
                     <button
@@ -262,7 +265,7 @@ function AISettingsContent({
                     onClick={ai.testConnection}
                     disabled={ai.isTesting || !ai.config.api_key}
                   >
-                    {ai.isTesting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Test'}
+                    {ai.isTesting ? <Loader2 className="w-4 h-4 animate-spin" /> : t('ai.test')}
                   </Button>
                 </div>
                 {ai.testResult && (
@@ -288,7 +291,7 @@ function AISettingsContent({
             {/* Ollama URL */}
             {ai.config.provider === 'ollama' && (
               <div className="space-y-2 py-2">
-                <p className="text-sm font-medium">Ollama URL</p>
+                <p className="text-sm font-medium">{t('ai.ollamaUrl')}</p>
                 <div className="flex items-center gap-2">
                   <Input
                     type="text"
@@ -303,7 +306,7 @@ function AISettingsContent({
                     onClick={ai.testConnection}
                     disabled={ai.isTesting}
                   >
-                    {ai.isTesting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Test'}
+                    {ai.isTesting ? <Loader2 className="w-4 h-4 animate-spin" /> : t('ai.test')}
                   </Button>
                 </div>
               </div>
@@ -312,8 +315,8 @@ function AISettingsContent({
             {/* Model */}
             <SettingsRow
               id="ai-model"
-              label="Model"
-              description="Select or type custom model"
+              label={t('ai.model')}
+              description={t('ai.modelDesc')}
               highlight={highlightId === 'ai-model'}
             >
               <div className="flex gap-2">
@@ -321,7 +324,7 @@ function AISettingsContent({
                   type="text"
                   value={ai.config.model}
                   onChange={(e) => ai.updateConfig({ model: e.target.value })}
-                  placeholder="Model name"
+                  placeholder={t('ai.modelPlaceholder')}
                   className="h-9 w-40"
                 />
                 <Select
@@ -329,7 +332,7 @@ function AISettingsContent({
                   onValueChange={(v) => ai.updateConfig({ model: v })}
                 >
                   <SelectTrigger className="w-[140px] h-9">
-                    <SelectValue placeholder="Quick select" />
+                    <SelectValue placeholder={t('ai.quickSelect')} />
                   </SelectTrigger>
                   <SelectContent>
                     {ai.models.map((m) => (
@@ -345,8 +348,8 @@ function AISettingsContent({
             {/* Summary Style */}
             <SettingsRow
               id="summary-style"
-              label="Summary Style"
-              description="How detailed the summary should be"
+              label={t('ai.summaryStyle')}
+              description={t('ai.summaryStyleDesc')}
               highlight={highlightId === 'summary-style'}
             >
               <Select
@@ -357,9 +360,9 @@ function AISettingsContent({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="short">Short (2-3 sentences)</SelectItem>
-                  <SelectItem value="concise">Concise (key points)</SelectItem>
-                  <SelectItem value="detailed">Detailed (comprehensive)</SelectItem>
+                  <SelectItem value="short">{t('ai.short')}</SelectItem>
+                  <SelectItem value="concise">{t('ai.concise')}</SelectItem>
+                  <SelectItem value="detailed">{t('ai.detailed')}</SelectItem>
                 </SelectContent>
               </Select>
             </SettingsRow>
@@ -367,8 +370,8 @@ function AISettingsContent({
             {/* Summary Language */}
             <SettingsRow
               id="summary-language"
-              label="Summary Language"
-              description="Language for generated summaries"
+              label={t('ai.summaryLanguage')}
+              description={t('ai.summaryLanguageDesc')}
               highlight={highlightId === 'summary-language'}
             >
               <Select
@@ -379,7 +382,7 @@ function AISettingsContent({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="auto">Auto (Same as video)</SelectItem>
+                  <SelectItem value="auto">{t('ai.autoSameAsVideo')}</SelectItem>
                   {LANGUAGE_OPTIONS.map((l) => (
                     <SelectItem key={l.code} value={l.code}>
                       {l.name}
@@ -392,8 +395,8 @@ function AISettingsContent({
             {/* Timeout */}
             <SettingsRow
               id="ai-timeout"
-              label="Generation Timeout"
-              description="Max time for AI response"
+              label={t('ai.timeout')}
+              description={t('ai.timeoutDesc')}
               highlight={highlightId === 'ai-timeout'}
             >
               <Select
@@ -404,10 +407,10 @@ function AISettingsContent({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="60">60 seconds</SelectItem>
-                  <SelectItem value="120">2 minutes</SelectItem>
-                  <SelectItem value="180">3 minutes</SelectItem>
-                  <SelectItem value="300">5 minutes</SelectItem>
+                  <SelectItem value="60">{t('ai.60seconds')}</SelectItem>
+                  <SelectItem value="120">{t('ai.2minutes')}</SelectItem>
+                  <SelectItem value="180">{t('ai.3minutes')}</SelectItem>
+                  <SelectItem value="300">{t('ai.5minutes')}</SelectItem>
                 </SelectContent>
               </Select>
             </SettingsRow>
@@ -423,10 +426,8 @@ function AISettingsContent({
               )}
             >
               <div>
-                <p className="text-sm font-medium">Transcript Languages</p>
-                <p className="text-xs text-muted-foreground">
-                  Languages to try when fetching subtitles
-                </p>
+                <p className="text-sm font-medium">{t('ai.transcriptLanguages')}</p>
+                <p className="text-xs text-muted-foreground">{t('ai.transcriptLanguagesDesc')}</p>
               </div>
               <div className="space-y-1.5">
                 {(ai.config.transcript_languages || DEFAULT_TRANSCRIPT_LANGUAGES).map(
@@ -482,7 +483,7 @@ function AISettingsContent({
                     <SelectTrigger className="w-full h-9 text-muted-foreground">
                       <div className="flex items-center gap-2">
                         <Plus className="w-4 h-4" />
-                        <span>Add language...</span>
+                        <span>{t('ai.addLanguage')}</span>
                       </div>
                     </SelectTrigger>
                     <SelectContent>
@@ -509,10 +510,8 @@ function AISettingsContent({
             >
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium">Whisper Transcription</p>
-                  <p className="text-xs text-muted-foreground">
-                    Use OpenAI Whisper for videos without captions
-                  </p>
+                  <p className="text-sm font-medium">{t('ai.whisper')}</p>
+                  <p className="text-xs text-muted-foreground">{t('ai.whisperDesc')}</p>
                 </div>
                 <Switch
                   checked={ai.config.whisper_enabled || false}
@@ -524,7 +523,7 @@ function AISettingsContent({
                   {ai.config.provider === 'openai' ? (
                     <div className="flex items-center gap-2 text-xs p-2 rounded-lg bg-emerald-500/10 text-emerald-500">
                       <Check className="w-3.5 h-3.5" />
-                      <span>Using your OpenAI API key for Whisper</span>
+                      <span>{t('ai.usingOpenAI')}</span>
                     </div>
                   ) : (
                     <div className="space-y-2">
@@ -532,12 +531,12 @@ function AISettingsContent({
                         type="password"
                         value={ai.config.whisper_api_key || ''}
                         onChange={(e) => ai.updateConfig({ whisper_api_key: e.target.value })}
-                        placeholder="OpenAI API key for Whisper"
+                        placeholder={t('ai.whisperApiKey')}
                         className="h-9"
                       />
                     </div>
                   )}
-                  <p className="text-xs text-muted-foreground">Cost: ~$0.006/minute of audio</p>
+                  <p className="text-xs text-muted-foreground">{t('ai.whisperCost')}</p>
                 </div>
               )}
             </div>
@@ -566,13 +565,14 @@ function AboutSettingsContent({
   isAppError: boolean;
   highlightId: string | null;
 }) {
+  const { t } = useTranslation('settings');
   const { settings, updateAutoCheckUpdate } = useDownload();
 
   return (
     <div className="space-y-8">
       <SettingsSection
-        title="About"
-        description="Application information"
+        title={t('about.title')}
+        description={t('about.description')}
         icon={<Info className="w-5 h-5 text-white" />}
         iconClassName="bg-gradient-to-br from-pink-500 to-rose-600 shadow-pink-500/20"
       >
@@ -590,26 +590,26 @@ function AboutSettingsContent({
                     v{appVersion}
                   </Badge>
                 </div>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Modern video downloader with AI summaries
-                </p>
+                <p className="text-sm text-muted-foreground mt-1">{t('about.appDesc')}</p>
                 <p className="text-xs text-muted-foreground mt-0.5">
                   {isAppChecking ? (
                     <span className="flex items-center gap-1">
                       <Loader2 className="w-3 h-3 animate-spin" />
-                      Checking for updates...
+                      {t('about.checkingUpdates')}
                     </span>
                   ) : isAppUpdateAvailable && updater.updateInfo ? (
                     <span className="text-primary font-medium">
-                      v{updater.updateInfo.version} available
+                      {t('about.versionAvailable', { version: updater.updateInfo.version })}
                     </span>
                   ) : isAppUpToDate ? (
                     <span className="flex items-center gap-1 text-emerald-500">
                       <CheckCircle2 className="w-3 h-3" />
-                      Up to date
+                      {t('about.upToDate')}
                     </span>
                   ) : isAppError ? (
-                    <span className="text-destructive">{updater.error || 'Check failed'}</span>
+                    <span className="text-destructive">
+                      {updater.error || t('about.checkFailed')}
+                    </span>
                   ) : null}
                 </p>
               </div>
@@ -627,12 +627,12 @@ function AboutSettingsContent({
                       <Loader2 className="w-4 h-4 animate-spin" />
                       {updater.status === 'downloading'
                         ? `${updater.progress ? Math.round((updater.progress.downloaded / updater.progress.total) * 100) : 0}%`
-                        : 'Restarting...'}
+                        : t('about.restarting')}
                     </>
                   ) : (
                     <>
                       <Download className="w-4 h-4" />
-                      Update
+                      {t('about.update')}
                     </>
                   )}
                 </Button>
@@ -642,7 +642,7 @@ function AboutSettingsContent({
                 size="icon"
                 onClick={updater.checkForUpdate}
                 disabled={isAppChecking}
-                title="Check for updates"
+                title={t('about.checkForUpdates')}
                 className="h-9 w-9"
               >
                 <RefreshCw className={cn('w-4 h-4', isAppChecking && 'animate-spin')} />
@@ -668,7 +668,7 @@ function AboutSettingsContent({
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-background/50 hover:bg-background text-xs font-medium transition-colors"
             >
               <FileText className="w-3.5 h-3.5" />
-              License
+              {t('about.license')}
             </a>
             <a
               href="https://github.com/vanloctech/youwee/issues"
@@ -677,15 +677,15 @@ function AboutSettingsContent({
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-background/50 hover:bg-background text-xs font-medium transition-colors"
             >
               <Bug className="w-3.5 h-3.5" />
-              Report Issue
+              {t('about.reportIssue')}
             </a>
           </div>
 
           {/* Made with love */}
           <div className="flex items-center justify-center gap-1.5 mt-4 pt-4 border-t border-border/50">
-            <span className="text-xs text-muted-foreground">Made with</span>
+            <span className="text-xs text-muted-foreground">{t('about.madeWith')}</span>
             <Heart className="w-3.5 h-3.5 text-red-500 fill-red-500" />
-            <span className="text-xs text-muted-foreground">by</span>
+            <span className="text-xs text-muted-foreground">{t('about.by')}</span>
             <span className="text-xs font-medium bg-gradient-to-r from-red-500 via-yellow-500 to-red-500 bg-clip-text text-transparent">
               Vietnam
             </span>
@@ -695,8 +695,8 @@ function AboutSettingsContent({
         {/* Auto Update Toggle */}
         <SettingsRow
           id="auto-update"
-          label="Auto-check for updates"
-          description="Check for updates when app opens"
+          label={t('about.autoUpdate')}
+          description={t('about.autoUpdateDesc')}
           highlight={highlightId === 'auto-update'}
         >
           <Switch checked={settings.autoCheckUpdate} onCheckedChange={updateAutoCheckUpdate} />

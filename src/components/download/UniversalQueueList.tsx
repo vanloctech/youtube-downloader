@@ -1,4 +1,5 @@
 import { CheckCircle2, ExternalLink, Inbox } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import type { DownloadItem } from '@/lib/types';
@@ -32,6 +33,7 @@ export function UniversalQueueList({
   onRemove,
   onClearCompleted,
 }: UniversalQueueListProps) {
+  const { t } = useTranslation('universal');
   const completedCount = items.filter((i) => i.status === 'completed').length;
   const hasCompleted = completedCount > 0;
 
@@ -41,7 +43,7 @@ export function UniversalQueueList({
         <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center mb-4">
           <Inbox className="w-8 h-8 text-muted-foreground/50" />
         </div>
-        <h3 className="text-sm font-medium text-foreground mb-1">No videos in queue</h3>
+        <h3 className="text-sm font-medium text-foreground mb-1">{t('queue.empty.title')}</h3>
         <p className="text-xs text-muted-foreground mb-4 max-w-[280px]">
           Supports <span className="font-semibold text-primary">1,800+</span> websites via yt-dlp
         </p>
@@ -62,7 +64,7 @@ export function UniversalQueueList({
           ))}
           <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-muted/50 text-[11px] text-muted-foreground">
             <i className="fa fa-plus text-[10px]" aria-hidden="true" />
-            <span>1,790 more</span>
+            <span>{t('queue.empty.moreCount')}</span>
           </span>
         </div>
 
@@ -73,7 +75,7 @@ export function UniversalQueueList({
           rel="noopener noreferrer"
           className="inline-flex items-center gap-1.5 text-xs text-primary hover:underline"
         >
-          <span>View full list of supported sites</span>
+          <span>{t('queue.empty.viewFullList')}</span>
           <ExternalLink className="w-3 h-3" />
         </a>
       </div>
@@ -85,7 +87,9 @@ export function UniversalQueueList({
       {/* Queue Header */}
       <div className="flex items-center justify-between mb-2">
         <span className="text-xs text-muted-foreground">
-          {items.length} {items.length === 1 ? 'video' : 'videos'} in queue
+          {items.length === 1
+            ? t('queue.videosInQueue', { count: items.length })
+            : t('queue.videosInQueue_plural', { count: items.length })}
         </span>
         {hasCompleted && (
           <Button
@@ -96,7 +100,7 @@ export function UniversalQueueList({
             disabled={isDownloading}
           >
             <CheckCircle2 className="w-3 h-3" />
-            Clear {completedCount} completed
+            {t('queue.clearCompleted', { count: completedCount })}
           </Button>
         )}
       </div>

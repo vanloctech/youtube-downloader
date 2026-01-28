@@ -8,6 +8,7 @@ import {
   RefreshCw,
   Terminal,
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
@@ -21,6 +22,7 @@ interface DependenciesSectionProps {
 }
 
 export function DependenciesSection({ highlightId }: DependenciesSectionProps) {
+  const { t } = useTranslation('settings');
   const { settings, updateUseBunRuntime, updateUseActualPlayerJs } = useDownload();
   const {
     // yt-dlp
@@ -60,8 +62,8 @@ export function DependenciesSection({ highlightId }: DependenciesSectionProps) {
   return (
     <div className="space-y-8">
       <SettingsSection
-        title="Dependencies"
-        description="External tools for downloading"
+        title={t('dependencies.title')}
+        description={t('dependencies.description')}
         icon={<Package className="w-5 h-5 text-white" />}
         iconClassName="bg-gradient-to-br from-orange-500 to-red-600 shadow-orange-500/20"
       >
@@ -74,7 +76,7 @@ export function DependenciesSection({ highlightId }: DependenciesSectionProps) {
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="font-medium">yt-dlp</span>
+                  <span className="font-medium">{t('dependencies.ytdlp')}</span>
                   {isLoading ? (
                     <Loader2 className="w-3 h-3 animate-spin text-muted-foreground" />
                   ) : ytdlpInfo ? (
@@ -83,7 +85,7 @@ export function DependenciesSection({ highlightId }: DependenciesSectionProps) {
                     </Badge>
                   ) : (
                     <Badge variant="destructive" className="text-xs">
-                      Not found
+                      {t('dependencies.notFound')}
                     </Badge>
                   )}
                 </div>
@@ -91,18 +93,20 @@ export function DependenciesSection({ highlightId }: DependenciesSectionProps) {
                   {isUpdating ? (
                     <span className="flex items-center gap-1 text-primary">
                       <Loader2 className="w-3 h-3 animate-spin" />
-                      Updating...
+                      {t('dependencies.updating')}
                     </span>
                   ) : updateSuccess ? (
-                    <span className="text-emerald-500">Updated!</span>
+                    <span className="text-emerald-500">{t('dependencies.updated')}</span>
                   ) : error ? (
                     <span className="text-destructive">{error}</span>
                   ) : isUpdateAvailable ? (
-                    <span className="text-primary">{latestVersion} available</span>
+                    <span className="text-primary">
+                      {t('dependencies.available', { version: latestVersion })}
+                    </span>
                   ) : latestVersion ? (
-                    <span className="text-emerald-500">Up to date</span>
+                    <span className="text-emerald-500">{t('dependencies.upToDate')}</span>
                   ) : (
-                    'Video download engine'
+                    t('dependencies.videoDownloadEngine')
                   )}
                 </p>
               </div>
@@ -110,7 +114,11 @@ export function DependenciesSection({ highlightId }: DependenciesSectionProps) {
             <div className="flex items-center gap-2">
               {isUpdateAvailable && (
                 <Button size="sm" onClick={updateYtdlp} disabled={isUpdating}>
-                  {isUpdating ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Update'}
+                  {isUpdating ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    t('dependencies.update')
+                  )}
                 </Button>
               )}
               <Button
@@ -144,16 +152,16 @@ export function DependenciesSection({ highlightId }: DependenciesSectionProps) {
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="font-medium">FFmpeg</span>
+                  <span className="font-medium">{t('dependencies.ffmpeg')}</span>
                   {ffmpegLoading ? (
                     <Loader2 className="w-3 h-3 animate-spin text-muted-foreground" />
                   ) : ffmpegStatus?.installed ? (
                     <Badge variant="secondary" className="font-mono text-xs">
-                      {ffmpegStatus.version || 'Installed'}
+                      {ffmpegStatus.version || t('dependencies.installed')}
                     </Badge>
                   ) : (
                     <Badge variant="destructive" className="text-xs">
-                      Not found
+                      {t('dependencies.notFound')}
                     </Badge>
                   )}
                 </div>
@@ -161,31 +169,35 @@ export function DependenciesSection({ highlightId }: DependenciesSectionProps) {
                   {ffmpegDownloading ? (
                     <span className="flex items-center gap-1 text-primary">
                       <Loader2 className="w-3 h-3 animate-spin" />
-                      {ffmpegUpdateInfo?.has_update ? 'Updating...' : 'Installing...'}
+                      {ffmpegUpdateInfo?.has_update
+                        ? t('dependencies.updating')
+                        : t('dependencies.installing')}
                     </span>
                   ) : ffmpegCheckingUpdate ? (
                     <span className="flex items-center gap-1 text-muted-foreground">
                       <Loader2 className="w-3 h-3 animate-spin" />
-                      Checking for updates...
+                      {t('dependencies.checkingUpdates')}
                     </span>
                   ) : ffmpegSuccess ? (
                     <span className="text-emerald-500">
-                      {ffmpegUpdateInfo?.has_update ? 'Updated!' : 'Installed!'}
+                      {ffmpegUpdateInfo?.has_update
+                        ? t('dependencies.updated')
+                        : t('dependencies.installed')}
                     </span>
                   ) : ffmpegError ? (
                     <span className="text-destructive">{ffmpegError}</span>
                   ) : ffmpegUpdateInfo?.has_update ? (
                     <span className="text-primary">
-                      {ffmpegUpdateInfo.latest_version} available
+                      {t('dependencies.available', { version: ffmpegUpdateInfo.latest_version })}
                     </span>
                   ) : ffmpegUpdateInfo && !ffmpegUpdateInfo.has_update ? (
-                    <span className="text-emerald-500">Up to date</span>
+                    <span className="text-emerald-500">{t('dependencies.upToDate')}</span>
                   ) : !ffmpegStatus?.installed ? (
-                    <span className="text-amber-500">Required for 2K/4K/8K videos</span>
+                    <span className="text-amber-500">{t('dependencies.requiredFor2K4K8K')}</span>
                   ) : ffmpegStatus?.is_system ? (
-                    'System FFmpeg - update via package manager'
+                    t('dependencies.systemFfmpeg')
                   ) : (
-                    'Audio/video processing'
+                    t('dependencies.audioVideoProcessing')
                   )}
                 </p>
               </div>
@@ -193,12 +205,20 @@ export function DependenciesSection({ highlightId }: DependenciesSectionProps) {
             <div className="flex items-center gap-2">
               {ffmpegUpdateInfo?.has_update && !ffmpegStatus?.is_system && (
                 <Button size="sm" onClick={downloadFfmpeg} disabled={ffmpegDownloading}>
-                  {ffmpegDownloading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Update'}
+                  {ffmpegDownloading ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    t('dependencies.update')
+                  )}
                 </Button>
               )}
               {!ffmpegStatus?.installed && !ffmpegLoading && (
                 <Button size="sm" onClick={downloadFfmpeg} disabled={ffmpegDownloading}>
-                  {ffmpegDownloading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Install'}
+                  {ffmpegDownloading ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    t('dependencies.install')
+                  )}
                 </Button>
               )}
               <Button
@@ -212,7 +232,7 @@ export function DependenciesSection({ highlightId }: DependenciesSectionProps) {
                   !ffmpegStatus?.installed ||
                   ffmpegStatus?.is_system
                 }
-                title="Check for updates"
+                title={t('dependencies.checkForUpdates')}
               >
                 <RefreshCw
                   className={cn(
@@ -243,16 +263,16 @@ export function DependenciesSection({ highlightId }: DependenciesSectionProps) {
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="font-medium">Bun Runtime</span>
+                  <span className="font-medium">{t('dependencies.bunRuntime')}</span>
                   {bunLoading ? (
                     <Loader2 className="w-3 h-3 animate-spin text-muted-foreground" />
                   ) : bunStatus?.installed ? (
                     <Badge variant="secondary" className="font-mono text-xs">
-                      {bunStatus.version || 'Installed'}
+                      {bunStatus.version || t('dependencies.installed')}
                     </Badge>
                   ) : (
                     <Badge variant="outline" className="text-xs">
-                      Optional
+                      {t('dependencies.optional')}
                     </Badge>
                   )}
                 </div>
@@ -260,31 +280,35 @@ export function DependenciesSection({ highlightId }: DependenciesSectionProps) {
                   {bunDownloading ? (
                     <span className="flex items-center gap-1 text-primary">
                       <Loader2 className="w-3 h-3 animate-spin" />
-                      {bunUpdateInfo?.has_update ? 'Updating...' : 'Installing...'}
+                      {bunUpdateInfo?.has_update
+                        ? t('dependencies.updating')
+                        : t('dependencies.installing')}
                     </span>
                   ) : bunCheckingUpdate ? (
                     <span className="flex items-center gap-1 text-muted-foreground">
                       <Loader2 className="w-3 h-3 animate-spin" />
-                      Checking for updates...
+                      {t('dependencies.checkingUpdates')}
                     </span>
                   ) : bunSuccess ? (
                     <span className="text-emerald-500">
-                      {bunUpdateInfo?.has_update ? 'Updated!' : 'Installed!'}
+                      {bunUpdateInfo?.has_update
+                        ? t('dependencies.updated')
+                        : t('dependencies.installed')}
                     </span>
                   ) : bunError ? (
                     <span className="text-destructive">{bunError}</span>
                   ) : bunUpdateInfo?.has_update ? (
-                    <span className="text-primary">{bunUpdateInfo.latest_version} available</span>
-                  ) : bunUpdateInfo && !bunUpdateInfo.has_update ? (
-                    <span className="text-emerald-500">Up to date</span>
-                  ) : !bunStatus?.installed ? (
-                    <span className="text-amber-500">
-                      Enable in download settings if only 360p available
+                    <span className="text-primary">
+                      {t('dependencies.available', { version: bunUpdateInfo.latest_version })}
                     </span>
+                  ) : bunUpdateInfo && !bunUpdateInfo.has_update ? (
+                    <span className="text-emerald-500">{t('dependencies.upToDate')}</span>
+                  ) : !bunStatus?.installed ? (
+                    <span className="text-amber-500">{t('dependencies.enable360pFix')}</span>
                   ) : bunStatus?.is_system ? (
-                    'System Bun - update via package manager'
+                    t('dependencies.systemBun')
                   ) : (
-                    'JavaScript runtime for YouTube'
+                    t('dependencies.jsRuntimeForYoutube')
                   )}
                 </p>
               </div>
@@ -292,12 +316,20 @@ export function DependenciesSection({ highlightId }: DependenciesSectionProps) {
             <div className="flex items-center gap-2">
               {bunUpdateInfo?.has_update && !bunStatus?.is_system && (
                 <Button size="sm" onClick={downloadBun} disabled={bunDownloading}>
-                  {bunDownloading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Update'}
+                  {bunDownloading ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    t('dependencies.update')
+                  )}
                 </Button>
               )}
               {!bunStatus?.installed && !bunLoading && (
                 <Button size="sm" onClick={downloadBun} disabled={bunDownloading}>
-                  {bunDownloading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Install'}
+                  {bunDownloading ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    t('dependencies.install')
+                  )}
                 </Button>
               )}
               <Button
@@ -311,7 +343,7 @@ export function DependenciesSection({ highlightId }: DependenciesSectionProps) {
                   !bunStatus?.installed ||
                   bunStatus?.is_system
                 }
-                title="Check for updates"
+                title={t('dependencies.checkForUpdates')}
               >
                 <RefreshCw
                   className={cn('w-4 h-4', (bunLoading || bunCheckingUpdate) && 'animate-spin')}
@@ -322,10 +354,8 @@ export function DependenciesSection({ highlightId }: DependenciesSectionProps) {
           <div className="mt-3 pt-3 border-t border-border/50">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs font-medium">Use Bun for YouTube</p>
-                <p className="text-xs text-muted-foreground">
-                  Fixes 360p-only issue on some systems
-                </p>
+                <p className="text-xs font-medium">{t('dependencies.useBunForYoutube')}</p>
+                <p className="text-xs text-muted-foreground">{t('dependencies.fixes360pIssue')}</p>
               </div>
               <Switch
                 checked={settings.useBunRuntime}
@@ -355,16 +385,18 @@ export function DependenciesSection({ highlightId }: DependenciesSectionProps) {
               <AlertCircle className="w-5 h-5 text-white" />
             </div>
             <div>
-              <span className="font-medium">YouTube Troubleshooting</span>
-              <p className="text-xs text-muted-foreground mt-0.5">Options to fix download issues</p>
+              <span className="font-medium">{t('dependencies.youtubeTroubleshooting')}</span>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {t('dependencies.optionsToFixIssues')}
+              </p>
             </div>
           </div>
           <div className="mt-3 pt-3 border-t border-border/50">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs font-medium">Use Actual Player.js</p>
+                <p className="text-xs font-medium">{t('dependencies.useActualPlayerJs')}</p>
                 <p className="text-xs text-muted-foreground">
-                  Fixes "unable to download" errors on some videos
+                  {t('dependencies.fixesUnableToDownload')}
                 </p>
               </div>
               <Switch
@@ -379,7 +411,7 @@ export function DependenciesSection({ highlightId }: DependenciesSectionProps) {
             rel="noopener noreferrer"
             className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground mt-3 pt-3 border-t border-border/50"
           >
-            Learn more about this issue
+            {t('dependencies.learnMore')}
             <ExternalLink className="w-3 h-3" />
           </a>
         </SettingsCard>

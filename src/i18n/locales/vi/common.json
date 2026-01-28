@@ -1,0 +1,23 @@
+{
+  "sidebar": {
+    "youtube": "YouTube",
+    "universal": "Đa nền tảng",
+    "summary": "Tóm tắt AI",
+    "processing": "Xử lý video",
+    "library": "Thư viện",
+    "logs": "Nhật ký",
+    "settings": "Cài đặt",
+    "light": "Sáng",
+    "dark": "Tối",
+    "lightMode": "Chế độ sáng",
+    "darkMode": "Chế độ tối",
+    "collapse": "Thu gọn",
+    "expand": "Mở rộng"
+  },
+  "language": {
+    "en": "English",
+    "vi": "Tiếng Việt",
+    "label": "Ngôn ngữ",
+    "select": "Chọn ngôn ngữ"
+  }
+}

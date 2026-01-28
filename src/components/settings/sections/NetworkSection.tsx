@@ -2,6 +2,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { open } from '@tauri-apps/plugin-dialog';
 import { AlertCircle, ExternalLink, FolderOpen, Globe, KeyRound, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -21,6 +22,7 @@ interface NetworkSectionProps {
 }
 
 export function NetworkSection({ highlightId }: NetworkSectionProps) {
+  const { t } = useTranslation('settings');
   const { cookieSettings, proxySettings, updateCookieSettings, updateProxySettings } =
     useDownload();
 
@@ -90,8 +92,8 @@ export function NetworkSection({ highlightId }: NetworkSectionProps) {
   return (
     <div className="space-y-8">
       <SettingsSection
-        title="Network & Authentication"
-        description="Configure cookies and proxy for downloads"
+        title={t('network.title')}
+        description={t('network.description')}
         icon={<Globe className="w-5 h-5 text-white" />}
         iconClassName="bg-gradient-to-br from-blue-500 to-cyan-600 shadow-blue-500/20"
       >
@@ -105,10 +107,8 @@ export function NetworkSection({ highlightId }: NetworkSectionProps) {
               <KeyRound className="w-5 h-5 text-white" />
             </div>
             <div>
-              <span className="font-medium">Video Authentication</span>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                Access private, age-restricted, or members-only videos
-              </p>
+              <span className="font-medium">{t('network.videoAuth')}</span>
+              <p className="text-xs text-muted-foreground mt-0.5">{t('network.videoAuthDesc')}</p>
             </div>
           </div>
 
@@ -116,10 +116,8 @@ export function NetworkSection({ highlightId }: NetworkSectionProps) {
           <div className="mt-3 pt-3 border-t border-border/50">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs font-medium">Cookie Source</p>
-                <p className="text-xs text-muted-foreground">
-                  Import cookies for authenticated downloads
-                </p>
+                <p className="text-xs font-medium">{t('network.cookieSource')}</p>
+                <p className="text-xs text-muted-foreground">{t('network.cookieSourceDesc')}</p>
               </div>
               <Select
                 value={cookieSettings.mode}
@@ -129,9 +127,9 @@ export function NetworkSection({ highlightId }: NetworkSectionProps) {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="off">Off</SelectItem>
-                  <SelectItem value="browser">From Browser</SelectItem>
-                  <SelectItem value="file">From File</SelectItem>
+                  <SelectItem value="off">{t('network.off')}</SelectItem>
+                  <SelectItem value="browser">{t('network.fromBrowser')}</SelectItem>
+                  <SelectItem value="file">{t('network.fromFile')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -142,11 +140,11 @@ export function NetworkSection({ highlightId }: NetworkSectionProps) {
             <div className="mt-3 pt-3 border-t border-border/50 space-y-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs font-medium">Browser</p>
+                  <p className="text-xs font-medium">{t('network.browser')}</p>
                   <p className="text-xs text-muted-foreground">
                     {isDetectingBrowsers
-                      ? 'Detecting...'
-                      : `${detectedBrowsers.length} browser(s) detected`}
+                      ? t('network.detecting')
+                      : t('network.browsersDetected', { count: detectedBrowsers.length })}
                   </p>
                 </div>
                 <Select
@@ -155,7 +153,7 @@ export function NetworkSection({ highlightId }: NetworkSectionProps) {
                   disabled={isDetectingBrowsers}
                 >
                   <SelectTrigger className="w-[160px] h-8">
-                    <SelectValue placeholder="Select browser" />
+                    <SelectValue placeholder={t('network.selectBrowser')} />
                   </SelectTrigger>
                   <SelectContent>
                     {detectedBrowsers.map((browser) => (
@@ -180,13 +178,13 @@ export function NetworkSection({ highlightId }: NetworkSectionProps) {
               {cookieSettings.browser !== 'safari' && (
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-xs font-medium">Profile</p>
+                    <p className="text-xs font-medium">{t('network.profile')}</p>
                     <p className="text-xs text-muted-foreground">
                       {isLoadingProfiles
-                        ? 'Loading...'
+                        ? t('network.loading')
                         : browserProfiles.length > 0
-                          ? `${browserProfiles.length} profile(s) found`
-                          : 'No profiles detected'}
+                          ? t('network.profilesFound', { count: browserProfiles.length })
+                          : t('network.noProfilesDetected')}
                     </p>
                   </div>
                   {!useCustomProfile && browserProfiles.length > 0 ? (
@@ -203,7 +201,7 @@ export function NetworkSection({ highlightId }: NetworkSectionProps) {
                       disabled={isLoadingProfiles}
                     >
                       <SelectTrigger className="w-[200px] h-8">
-                        <SelectValue placeholder="Select profile" />
+                        <SelectValue placeholder={t('network.selectProfile')} />
                       </SelectTrigger>
                       <SelectContent>
                         {browserProfiles.map((profile) => (
@@ -214,7 +212,7 @@ export function NetworkSection({ highlightId }: NetworkSectionProps) {
                           </SelectItem>
                         ))}
                         <SelectItem value="__custom__">
-                          <span className="text-muted-foreground">Custom...</span>
+                          <span className="text-muted-foreground">{t('network.custom')}</span>
                         </SelectItem>
                       </SelectContent>
                     </Select>
@@ -224,7 +222,7 @@ export function NetworkSection({ highlightId }: NetworkSectionProps) {
                         type="text"
                         value={cookieSettings.browserProfile || ''}
                         onChange={(e) => updateCookieSettings({ browserProfile: e.target.value })}
-                        placeholder="Profile name"
+                        placeholder={t('network.profileName')}
                         className="w-[160px] h-8 text-xs"
                       />
                       {browserProfiles.length > 0 && (
@@ -254,9 +252,9 @@ export function NetworkSection({ highlightId }: NetworkSectionProps) {
                 <div className="flex items-start gap-2 p-2 rounded-lg bg-amber-500/10 border border-amber-500/20">
                   <AlertCircle className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
                   <div className="flex-1 text-xs">
-                    <p className="font-medium text-amber-500">Full Disk Access Required</p>
+                    <p className="font-medium text-amber-500">{t('network.fullDiskAccess')}</p>
                     <p className="text-muted-foreground mt-0.5">
-                      macOS requires Full Disk Access permission to read browser cookies.
+                      {t('network.fullDiskAccessDesc')}
                     </p>
                     <div className="flex items-center gap-2 mt-2">
                       <Button
@@ -272,7 +270,7 @@ export function NetworkSection({ highlightId }: NetworkSectionProps) {
                         }}
                       >
                         <ExternalLink className="w-3 h-3" />
-                        Open Settings
+                        {t('network.openSettings')}
                       </Button>
                     </div>
                   </div>
@@ -286,9 +284,9 @@ export function NetworkSection({ highlightId }: NetworkSectionProps) {
             <div className="mt-3 pt-3 border-t border-border/50 space-y-3">
               <div className="flex items-center justify-between gap-2">
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs font-medium">Cookie File</p>
+                  <p className="text-xs font-medium">{t('network.cookieFile')}</p>
                   <p className="text-xs text-muted-foreground truncate">
-                    {cookieSettings.filePath || 'No file selected'}
+                    {cookieSettings.filePath || t('network.noFileSelected')}
                   </p>
                 </div>
                 <Button
@@ -311,11 +309,11 @@ export function NetworkSection({ highlightId }: NetworkSectionProps) {
                   className="gap-1.5"
                 >
                   <FolderOpen className="w-3.5 h-3.5" />
-                  Browse
+                  {t('network.browse')}
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground">
-                Use Netscape cookie format. Export from browser extensions like{' '}
+                {t('network.cookieFileHelp')}{' '}
                 <a
                   href="https://chromewebstore.google.com/detail/get-cookiestxt-locally/cclelndahbckbenkjhflpdbgdldlbecc"
                   target="_blank"
@@ -336,9 +334,9 @@ export function NetworkSection({ highlightId }: NetworkSectionProps) {
               <Globe className="w-5 h-5 text-white" />
             </div>
             <div>
-              <span className="font-medium">Network Proxy</span>
+              <span className="font-medium">{t('network.networkProxy')}</span>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Route downloads through a proxy server
+                {t('network.networkProxyDesc')}
               </p>
             </div>
           </div>
@@ -347,8 +345,8 @@ export function NetworkSection({ highlightId }: NetworkSectionProps) {
           <div className="mt-3 pt-3 border-t border-border/50">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs font-medium">Proxy Type</p>
-                <p className="text-xs text-muted-foreground">HTTP or SOCKS5 proxy</p>
+                <p className="text-xs font-medium">{t('network.proxyType')}</p>
+                <p className="text-xs text-muted-foreground">{t('network.proxyTypeDesc')}</p>
               </div>
               <Select
                 value={proxySettings.mode}
@@ -358,9 +356,9 @@ export function NetworkSection({ highlightId }: NetworkSectionProps) {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="off">Off</SelectItem>
-                  <SelectItem value="http">HTTP/HTTPS</SelectItem>
-                  <SelectItem value="socks5">SOCKS5</SelectItem>
+                  <SelectItem value="off">{t('network.off')}</SelectItem>
+                  <SelectItem value="http">{t('network.httpHttps')}</SelectItem>
+                  <SelectItem value="socks5">{t('network.socks5')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -372,7 +370,7 @@ export function NetworkSection({ highlightId }: NetworkSectionProps) {
               {/* Host and Port */}
               <div className="flex items-center gap-2">
                 <div className="flex-1">
-                  <p className="text-xs font-medium mb-1">Host</p>
+                  <p className="text-xs font-medium mb-1">{t('network.host')}</p>
                   <Input
                     type="text"
                     value={proxySettings.host || ''}
@@ -382,7 +380,7 @@ export function NetworkSection({ highlightId }: NetworkSectionProps) {
                   />
                 </div>
                 <div className="w-24">
-                  <p className="text-xs font-medium mb-1">Port</p>
+                  <p className="text-xs font-medium mb-1">{t('network.port')}</p>
                   <Input
                     type="number"
                     value={proxySettings.port || ''}
@@ -400,7 +398,7 @@ export function NetworkSection({ highlightId }: NetworkSectionProps) {
               {/* Username and Password */}
               <div className="flex items-center gap-2">
                 <div className="flex-1">
-                  <p className="text-xs font-medium mb-1">Username (optional)</p>
+                  <p className="text-xs font-medium mb-1">{t('network.usernameOptional')}</p>
                   <Input
                     type="text"
                     value={proxySettings.username || ''}
@@ -410,7 +408,7 @@ export function NetworkSection({ highlightId }: NetworkSectionProps) {
                   />
                 </div>
                 <div className="flex-1">
-                  <p className="text-xs font-medium mb-1">Password (optional)</p>
+                  <p className="text-xs font-medium mb-1">{t('network.passwordOptional')}</p>
                   <Input
                     type="password"
                     value={proxySettings.password || ''}
@@ -421,9 +419,7 @@ export function NetworkSection({ highlightId }: NetworkSectionProps) {
                 </div>
               </div>
 
-              <p className="text-xs text-muted-foreground">
-                Common proxies: Clash (7890), V2Ray (10809), Shadowsocks (1080)
-              </p>
+              <p className="text-xs text-muted-foreground">{t('network.commonProxies')}</p>
             </div>
           )}
         </SettingsCard>

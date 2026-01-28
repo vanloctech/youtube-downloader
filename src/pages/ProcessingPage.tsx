@@ -1,5 +1,6 @@
 import { Clock, FileDown, Film, History, Maximize2, Music, Wand2, Zap } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ChatPanel, HistoryDialog, VideoPlayer } from '@/components/processing';
 import { ThemePicker } from '@/components/settings/ThemePicker';
 import { Badge } from '@/components/ui/badge';
@@ -8,6 +9,7 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { useProcessing } from '@/contexts/ProcessingContext';
 
 export function ProcessingPage() {
+  const { t } = useTranslation('pages');
   // Get state and actions from context (persistent across navigation)
   const {
     videoPath,
@@ -52,7 +54,7 @@ export function ProcessingPage() {
         <header className="flex-shrink-0 flex items-center justify-between h-12 sm:h-14 px-4 sm:px-6">
           <div className="flex items-center gap-2">
             <Wand2 className="w-5 h-5 text-primary" />
-            <h1 className="text-base sm:text-lg font-semibold">Processing</h1>
+            <h1 className="text-base sm:text-lg font-semibold">{t('processing.title')}</h1>
           </div>
           <div className="flex items-center gap-2">
             <Button
@@ -62,7 +64,7 @@ export function ProcessingPage() {
               className="gap-1"
             >
               <History className="w-4 h-4" />
-              <span className="hidden sm:inline">History</span>
+              <span className="hidden sm:inline">{t('processing.history')}</span>
               {history.length > 0 && (
                 <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">
                   {history.length}

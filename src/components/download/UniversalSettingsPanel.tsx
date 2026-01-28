@@ -1,4 +1,5 @@
 import { FileVideo, FolderOpen, HardDrive, Music, Settings2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -66,6 +67,7 @@ export function UniversalSettingsPanel({
   onConcurrentChange,
   onSelectFolder,
 }: UniversalSettingsPanelProps) {
+  const { t } = useTranslation('universal');
   const isAudioOnly =
     settings.quality === 'audio' || ['mp3', 'm4a', 'opus'].includes(settings.format);
   const formatOptions = isAudioOnly ? audioFormatOptions : videoFormatOptions;
@@ -114,7 +116,7 @@ export function UniversalSettingsPanel({
           )}
         >
           <FileVideo className="w-3.5 h-3.5" />
-          Video
+          {t('settings.video')}
         </button>
         <button
           type="button"
@@ -128,7 +130,7 @@ export function UniversalSettingsPanel({
           )}
         >
           <Music className="w-3.5 h-3.5" />
-          Audio
+          {t('settings.audio')}
         </button>
       </div>
 
@@ -141,7 +143,7 @@ export function UniversalSettingsPanel({
         >
           <SelectTrigger
             className="w-[85px] h-9 text-xs bg-card/50 border-border/50"
-            title="Video quality"
+            title={t('settings.videoQuality')}
           >
             <SelectValue>
               {videoQualityOptions.find((q) => q.value === currentVideoQuality)?.shortLabel}
@@ -161,7 +163,7 @@ export function UniversalSettingsPanel({
       <Select value={settings.format} onValueChange={onFormatChange} disabled={disabled}>
         <SelectTrigger
           className="w-[75px] h-9 text-xs bg-card/50 border-border/50"
-          title="Output format"
+          title={t('settings.outputFormat')}
         >
           <SelectValue />
         </SelectTrigger>
@@ -182,16 +184,16 @@ export function UniversalSettingsPanel({
             size="sm"
             className="h-9 px-2.5 gap-1.5"
             disabled={disabled}
-            title="Advanced settings"
+            title={t('settings.advanced')}
           >
             <Settings2 className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline text-xs">More</span>
+            <span className="hidden sm:inline text-xs">{t('settings.more')}</span>
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-72 p-0" align="end" side="bottom" sideOffset={8}>
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b bg-muted/30">
-            <h4 className="text-sm font-medium">Advanced Settings</h4>
+            <h4 className="text-sm font-medium">{t('settings.advanced')}</h4>
             {fileSizeDisplay && (
               <Badge variant="secondary" className="text-[10px] gap-1">
                 <HardDrive className="w-3 h-3" />
@@ -206,7 +208,9 @@ export function UniversalSettingsPanel({
             <div className="grid grid-cols-2 gap-3">
               {/* Audio Bitrate */}
               <div className="space-y-1.5">
-                <Label className="text-[11px] text-muted-foreground">Audio Quality</Label>
+                <Label className="text-[11px] text-muted-foreground">
+                  {t('settings.audioQuality')}
+                </Label>
                 <Select
                   value={settings.audioBitrate}
                   onValueChange={onAudioBitrateChange}
@@ -217,10 +221,10 @@ export function UniversalSettingsPanel({
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="auto" className="text-xs">
-                      Best (~160k)
+                      {t('settings.bestAudio')}
                     </SelectItem>
                     <SelectItem value="128" className="text-xs">
-                      Standard (128k)
+                      {t('settings.standardAudio')}
                     </SelectItem>
                   </SelectContent>
                 </Select>
@@ -228,7 +232,9 @@ export function UniversalSettingsPanel({
 
               {/* Concurrent Downloads */}
               <div className="space-y-1.5">
-                <Label className="text-[11px] text-muted-foreground">Parallel Downloads</Label>
+                <Label className="text-[11px] text-muted-foreground">
+                  {t('settings.parallelDownloads')}
+                </Label>
                 <Select
                   value={String(settings.concurrentDownloads || 1)}
                   onValueChange={(v) => onConcurrentChange(Number(v))}
@@ -240,7 +246,7 @@ export function UniversalSettingsPanel({
                   <SelectContent>
                     {[1, 2, 3, 4, 5].map((n) => (
                       <SelectItem key={n} value={String(n)} className="text-xs">
-                        {n} at a time
+                        {t('settings.atATime', { count: n })}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -250,7 +256,7 @@ export function UniversalSettingsPanel({
 
             {/* Output Folder */}
             <div className="space-y-1.5">
-              <Label className="text-[11px] text-muted-foreground">Save to</Label>
+              <Label className="text-[11px] text-muted-foreground">{t('settings.saveTo')}</Label>
               <button
                 type="button"
                 onClick={onSelectFolder}
@@ -259,7 +265,7 @@ export function UniversalSettingsPanel({
               >
                 <FolderOpen className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
                 <span className="truncate flex-1 text-muted-foreground">
-                  {settings.outputPath || 'Select folder...'}
+                  {settings.outputPath || t('settings.selectFolder')}
                 </span>
               </button>
             </div>
@@ -276,7 +282,11 @@ export function UniversalSettingsPanel({
         onClick={onSelectFolder}
         disabled={disabled}
         className="h-9 px-2.5 rounded-md border bg-card/50 border-border/50 text-xs flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors max-w-[140px]"
-        title={`Output folder: ${settings.outputPath || 'Not selected'}`}
+        title={
+          settings.outputPath
+            ? t('settings.outputFolder', { path: settings.outputPath })
+            : t('settings.outputFolder', { path: t('settings.notSelected') })
+        }
       >
         <FolderOpen className="w-3.5 h-3.5 flex-shrink-0" />
         <span className="truncate hidden xs:inline">{outputFolderName}</span>
@@ -287,7 +297,7 @@ export function UniversalSettingsPanel({
         <Badge
           variant="outline"
           className="h-9 px-2.5 text-xs gap-1.5 hidden sm:flex"
-          title="Total file size"
+          title={t('settings.totalFileSize')}
         >
           <HardDrive className="w-3.5 h-3.5" />
           {fileSizeDisplay}

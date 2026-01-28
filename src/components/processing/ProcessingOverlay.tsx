@@ -1,5 +1,6 @@
 import { Loader2 } from 'lucide-react';
 import { memo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import type { ProcessingProgress } from '@/lib/types';
@@ -13,6 +14,8 @@ export const ProcessingOverlay = memo(function ProcessingOverlay({
   progress,
   onCancel,
 }: ProcessingOverlayProps) {
+  const { t } = useTranslation('pages');
+
   return (
     <div className="absolute inset-0 bg-black/80 flex flex-col items-center justify-center gap-3 rounded-xl z-20">
       <Loader2 className="w-10 h-10 animate-spin text-primary" />
@@ -22,7 +25,7 @@ export const ProcessingOverlay = memo(function ProcessingOverlay({
       </div>
       <Progress value={progress.percent} className="w-48" />
       <Button variant="destructive" size="sm" onClick={onCancel}>
-        Cancel
+        {t('processing.overlay.cancel')}
       </Button>
     </div>
   );

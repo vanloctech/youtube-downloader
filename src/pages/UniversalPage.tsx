@@ -1,4 +1,5 @@
 import { Play, Square, Trash2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import {
   UniversalQueueList,
   UniversalSettingsPanel,
@@ -10,6 +11,7 @@ import { useUniversal } from '@/contexts/UniversalContext';
 import { cn } from '@/lib/utils';
 
 export function UniversalPage() {
+  const { t } = useTranslation('universal');
   const {
     items,
     isDownloading,
@@ -41,7 +43,7 @@ export function UniversalPage() {
     <div className="flex-1 flex flex-col overflow-hidden">
       {/* Header */}
       <header className="flex-shrink-0 flex items-center justify-between h-12 sm:h-14 px-4 sm:px-6">
-        <h1 className="text-base sm:text-lg font-semibold">Universal Download</h1>
+        <h1 className="text-base sm:text-lg font-semibold">{t('title')}</h1>
         <ThemePicker />
       </header>
 
@@ -107,10 +109,10 @@ export function UniversalPage() {
                   )}
                   onClick={startDownload}
                   disabled={pendingCount === 0}
-                  title="Start downloading all pending videos"
+                  title={t('actions.startDownload')}
                 >
                   <Play className="w-5 h-5" />
-                  <span>Start Download</span>
+                  <span>{t('actions.startDownload')}</span>
                   {pendingCount > 0 && (
                     <span className="ml-1 px-2 py-0.5 rounded-full bg-white/20 text-xs">
                       {pendingCount}
@@ -122,10 +124,10 @@ export function UniversalPage() {
                   className="flex-1 h-11 text-sm sm:text-base rounded-xl"
                   variant="destructive"
                   onClick={stopDownload}
-                  title="Stop current download"
+                  title={t('actions.stopDownload')}
                 >
                   <Square className="w-5 h-5 mr-2" />
-                  Stop Download
+                  {t('actions.stopDownload')}
                 </Button>
               )}
 
@@ -135,7 +137,7 @@ export function UniversalPage() {
                 onClick={clearAll}
                 disabled={isDownloading || items.length === 0}
                 className="h-11 w-11 rounded-xl flex-shrink-0 bg-transparent border-border/50 hover:bg-white/10"
-                title="Clear all items from queue"
+                title={t('actions.clearAll')}
               >
                 <Trash2 className="w-5 h-5" />
               </Button>

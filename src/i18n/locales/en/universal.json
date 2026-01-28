@@ -1,0 +1,86 @@
+{
+  "title": "Universal Download",
+  "urlInput": {
+    "single": "Single",
+    "multiple": "Multiple",
+    "singleHint": "Paste any video URL",
+    "multipleHint": "Add multiple URLs (one per line)",
+    "placeholder": "Paste video URL (TikTok, Instagram, Twitter, etc.)...",
+    "placeholderMultiple": "Paste video URLs here (one per line)\nhttps://www.tiktok.com/...\nhttps://www.instagram.com/...\nhttps://twitter.com/...",
+    "add": "Add",
+    "addToQueue": "Add to Queue",
+    "paste": "Paste",
+    "import": "Import",
+    "toAdd": "to add",
+    "urlCount": "{{count}} URL",
+    "urlCount_plural": "{{count}} URLs",
+    "dropHint": "Drop URLs or .txt file here"
+  },
+  "settings": {
+    "video": "Video",
+    "audio": "Audio",
+    "quality": "Quality",
+    "format": "Format",
+    "audioQuality": "Audio Quality",
+    "bestAudio": "Best (~160k)",
+    "standardAudio": "Standard (128k)",
+    "parallelDownloads": "Parallel Downloads",
+    "atATime": "{{count}} at a time",
+    "saveTo": "Save to",
+    "selectFolder": "Select folder...",
+    "outputFolder": "Output folder: {{path}}",
+    "notSelected": "Not selected",
+    "totalFileSize": "Total file size",
+    "videoQuality": "Video quality",
+    "outputFormat": "Output format",
+    "advanced": "Advanced Settings",
+    "more": "More"
+  },
+  "quality": {
+    "best": "Best Available",
+    "bestShort": "Best",
+    "1080": "Full HD 1080p",
+    "1080Short": "1080p",
+    "720": "HD 720p",
+    "720Short": "720p",
+    "480": "SD 480p",
+    "480Short": "480p",
+    "360": "Low 360p",
+    "360Short": "360p",
+    "audio": "Audio Only",
+    "audioShort": "Audio"
+  },
+  "queue": {
+    "title": "Queue",
+    "pending": "{{count}} pending",
+    "clearDone": "Clear done",
+    "remove": "Remove from queue",
+    "videosInQueue": "{{count}} video in queue",
+    "videosInQueue_plural": "{{count}} videos in queue",
+    "clearCompleted": "Clear {{count}} completed",
+    "empty": {
+      "title": "No videos in queue",
+      "description": "Supports <1>1,800+</1> websites via yt-dlp",
+      "moreCount": "1,790 more",
+      "viewFullList": "View full list of supported sites"
+    },
+    "status": {
+      "pending": "Pending",
+      "fetching": "Fetching",
+      "downloading": "Downloading",
+      "completed": "Completed",
+      "failed": "Failed"
+    },
+    "summarize": "Summarize",
+    "fetchingTranscript": "Fetching transcript...",
+    "generating": "Generating...",
+    "showMore": "Show more",
+    "showLess": "Show less",
+    "regenerateSummary": "Regenerate summary"
+  },
+  "actions": {
+    "startDownload": "Start Download",
+    "stopDownload": "Stop Download",
+    "clearAll": "Clear all items from queue"
+  }
+}
