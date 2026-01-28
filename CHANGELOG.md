@@ -8,6 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 
+## [0.5.4] - 2026-01-28
+
+### Fixed
+- **AI Settings restored** - Proxy URL input, API key hints with platform links, and transcript language reordering now work correctly
+
+### Changed
+- Wider Model input and Summary Style dropdown for better readability
+
+
 ## [0.5.3] - 2026-01-28
 
 ### Added
